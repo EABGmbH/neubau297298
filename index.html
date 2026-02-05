@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KfW Förderrechner 297/298 - Klimafreundlicher Neubau</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .progress-bar {
+            transition: width 0.3s ease-in-out;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 280px;
+            background-color: #1f2937;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 12px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -140px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // ==================== KONSTANTEN (werden aus JSON geladen) ====================
+        // Fallback-Werte falls JSON nicht ladbar
+        const DEFAULT_ZINSSAETZE = {
+            markt: {
+                zehn_jahre: 3.65
+            },
+            kfw: {
+                eh40_kfn: 2.45,
+                eh55_befristet: 1.94
+            }
+        };
+
+        const DEFAULT_FOERDERGRENZEN = {
+            basis: 100000,
+            qng_bonus: 150000
+        };
+
+        const DEFAULT_TILGUNG = 2.00;
+
+        // ==================== BERECHNUNGS-ENGINE ====================
+        class CalculationEngine {
+            static validateEligibility(formData, zinssaetze = DEFAULT_ZINSSAETZE) {
+                const { 
+                    constructionStarted, 
+                    heating, 
+                    standard, 
+                    hasPermit, 
+                    qngPlanned 
+                } = formData;
+
+                // Level 1: Knock-out Kriterien
+                if (constructionStarted) {
+                    return {
+                        eligible: false,
+                        reason: "Baubeginn vor Antragstellung ist ein Ausschlusskriterium. Die Förderung muss vor Baubeginn beantragt werden.",
+                        level: "error"
+                    };
+                }
+
+                if (heating === "gas" || heating === "oel" || heating === "kohle") {
+                    return {
+                        eligible: false,
+                        reason: "Fossile Energieträger (Gas, Öl, Kohle) sind im KfW-Neubau-Programm nicht förderfähig. Bitte wählen Sie eine erneuerbare Heizung.",
+                        level: "error"
+                    };
+                }
+
+                // Level 2: Standard-spezifische Prüfung
+                if (standard === "eh55") {
+                    if (!hasPermit) {
+                        return {
+                            eligible: false,
+                            reason: "Die befristete EH 55-Förderung gilt nur für bereits genehmigte Projekte, bei denen der Bau noch nicht begonnen hat.",
+                            level: "error"
+                        };
+                    }
+
+                    if (heating === "biomasse") {
+                        return {
+                            eligible: true,
+                            program: "EH 55 Befristet",
+                            zinssatz: zinssaetze.kfw.eh55_befristet,
+                            maxKredit: DEFAULT_FOERDERGRENZEN.basis,
+                            warning: "Hinweis: Biomasse ist zugelassen, aber es muss 100% erneuerbare Energie nachgewiesen werden."
+                        };
+                    }
+
+                    return {
+                        eligible: true,
+                        program: "EH 55 Befristet",
+                        zinssatz: zinssaetze.kfw.eh55_befristet,
+                        maxKredit: DEFAULT_FOERDERGRENZEN.basis
+                    };
+                }
+
+                if (standard === "eh40") {
+                    if (heating === "biomasse") {
+                        return {
+                            eligible: false,
+                            reason: "Biomasseheizungen (Pellets, Hackschnitzel, Scheitholz) sind im Programm 'Klimafreundlicher Neubau' (EH 40) nicht förderfähig. Alternative: Wärmepumpe oder Fernwärme.",
+                            level: "error"
+                        };
+                    }
+
+                    if (qngPlanned) {
+                        return {
+                            eligible: true,
+                            program: "Klimafreundlicher Neubau mit QNG-Siegel",
+                            zinssatz: zinssaetze.kfw.eh40_kfn,
+                            maxKredit: DEFAULT_FOERDERGRENZEN.qng_bonus,
+                            bonus: "Sie erhalten 50.000 € zusätzliches Kreditvolumen durch das QNG-Siegel!"
+                        };
+                    }
+
+                    return {
+                        eligible: true,
+                        program: "Klimafreundlicher Neubau (KFN)",
+                        zinssatz: zinssaetze.kfw.eh40_kfn,
+                        maxKredit: DEFAULT_FOERDERGRENZEN.basis
+                    };
+                }
+
+                return {
+                    eligible: false,
+                    reason: "Unbekannter Fehler in der Validierung.",
+                    level: "error"
+                };
+            }
+
+            static calculateFinancials(kreditbetrag, wohneinheiten, kfwZins, zinssaetze = DEFAULT_ZINSSAETZE, tilgung = DEFAULT_TILGUNG) {
+                const gesamtKredit = Math.min(kreditbetrag, kreditbetrag); // Später mit WE multiplizieren falls nötig
+                const marktZins = zinssaetze.markt.zehn_jahre;
+
+                // Berechnung Marktdarlehen
+                const marktGesamtrate = (marktZins + tilgung) / 100;
+                const marktMonatlicheRate = (gesamtKredit * marktGesamtrate) / 12;
+                const marktZinsJahr1 = gesamtKredit * (marktZins / 100);
+
+                // Berechnung KfW-Darlehen
+                const kfwGesamtrate = (kfwZins + tilgung) / 100;
+                const kfwMonatlicheRate = (gesamtKredit * kfwGesamtrate) / 12;
+                const kfwZinsJahr1 = gesamtKredit * (kfwZins / 100);
+
+                // Vereinfachte Zinsersparnis über 10 Jahre (ohne Zinseszins der Tilgung)
+                const zinsdifferenz = marktZins - kfwZins;
+                const zinsersparnisGesamt = gesamtKredit * (zinsdifferenz / 100) * 10;
+
+                // Monatliche Ersparnis
+                const monatlicheErsparnis = marktMonatlicheRate - kfwMonatlicheRate;
+
+                return {
+                    gesamtKredit,
+                    markt: {
+                        zinssatz: marktZins,
+                        monatlicheRate: marktMonatlicheRate,
+                        zinsJahr1: marktZinsJahr1
+                    },
+                    kfw: {
+                        zinssatz: kfwZins,
+                        monatlicheRate: kfwMonatlicheRate,
+                        zinsJahr1: kfwZinsJahr1
+                    },
+                    ersparnis: {
+                        monatlich: monatlicheErsparnis,
+                        ueber10Jahre: zinsersparnisGesamt
+                    }
+                };
+            }
+        }
+
+        // ==================== HAUPTKOMPONENTE ====================
+        function KfWRechner() {
+            const [currentStep, setCurrentStep] = useState(1);
+            const [zinssaetze, setZinssaetze] = useState(null);
+            const [zinssaetzeLoading, setZinssaetzeLoading] = useState(true);
+            const [zinssaetzeError, setZinssaetzeError] = useState(null);
+            const [formData, setFormData] = useState({
+                // Step 1: Projekt
+                usage: 'selbstgenutzt',
+                wohneinheiten: 1,
+                projectType: 'neubau',
+                
+                // Step 2: Status
+                hasPermit: false,
+                constructionStarted: false,
+                
+                // Step 3: Technik
+                standard: 'eh40',
+                heating: '',
+                pvPlanned: false,
+                ventilation: '',
+                qngPlanned: false,
+                
+                // Step 4: Finanzen
+                kreditwunsch: 100000
+            });
+
+            const [validationResult, setValidationResult] = useState(null);
+            const [financialResult, setFinancialResult] = useState(null);
+
+            // Zinssätze beim Start laden
+            useEffect(() => {
+                fetch('./zinssaetze.json')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Zinssätze-Datei nicht gefunden');
+                        return response.json();
+                    })
+                    .then(data => {
+                        setZinssaetze({
+                            markt: { zehn_jahre: data.markt.zehn_jahre_unter_90 },
+                            kfw: { 
+                                eh40_kfn: data.kfw.eh40_kfn,
+                                eh55_befristet: data.kfw.eh55_befristet
+                            }
+                        });
+                        setZinssaetzeLoading(false);
+                    })
+                    .catch(error => {
+                        console.warn('Zinssätze konnten nicht geladen werden, nutze Fallback-Werte:', error);
+                        setZinssaetze(DEFAULT_ZINSSAETZE);
+                        setZinssaetzeError('Zinssätze verwenden Fallback-Werte');
+                        setZinssaetzeLoading(false);
+                    });
+            }, []);
+
+            const totalSteps = 4;
+            const progress = (currentStep / totalSteps) * 100;
+
+            useEffect(() => {
+                if (currentStep === 4 && formData.heating && zinssaetze) {
+                    const validation = CalculationEngine.validateEligibility(formData, zinssaetze);
+                    setValidationResult(validation);
+                    
+                    if (validation.eligible) {
+                        const maxKredit = validation.maxKredit * formData.wohneinheiten;
+                        const actualKredit = Math.min(formData.kreditwunsch, maxKredit);
+                        const finances = CalculationEngine.calculateFinancials(
+                            actualKredit,
+                            formData.wohneinheiten,
+                            validation.zinssatz,
+                            zinssaetze
+                        );
+                        setFinancialResult(finances);
+                    }
+                }
+            }, [currentStep, formData, zinssaetze]);
+
+            const updateFormData = (key, value) => {
+                setFormData(prev => ({ ...prev, [key]: value }));
+            };
+
+            const nextStep = () => {
+                if (currentStep < totalSteps) {
+                    setCurrentStep(prev => prev + 1);
+                }
+            };
+
+            const prevStep = () => {
+                if (currentStep > 1) {
+                    setCurrentStep(prev => prev - 1);
+                }
+            };
+
+            const resetCalculator = () => {
+                setCurrentStep(1);
+                setFormData({
+                    usage: 'selbstgenutzt',
+                    wohneinheiten: 1,
+                    projectType: 'neubau',
+                    hasPermit: false,
+                    constructionStarted: false,
+                    standard: 'eh40',
+                    heating: '',
+                    pvPlanned: false,
+                    ventilation: '',
+                    qngPlanned: false,
+                    kreditwunsch: 100000
+                });
+                setValidationResult(null);
+                setFinancialResult(null);
+            };
+
+            // Ladebildschirm während Zinssätze geladen werden
+            if (zinssaetzeLoading) {
+                return (
+                    <div className="min-h-screen py-8 px-4 flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                            <p className="text-gray-600">Aktuelle Zinssätze werden geladen...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen py-8 px-4">
+                    <div className="max-w-4xl mx-auto">
+                        {/* Header */}
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                                KfW Förderrechner 297/298
+                            </h1>
+                            <p className="text-lg text-gray-600">
+                                Klimafreundlicher Neubau - Berechnen Sie Ihre Zinsvorteile
+                            </p>
+                            {zinssaetzeError && (
+                                <div className="mt-2 text-sm text-orange-600">
+                                    ⚠️ {zinssaetzeError}
+                                </div>
+                            )}
+                            {zinssaetze && (
+                                <div className="mt-2 text-xs text-gray-500">
+                                    Zinssätze: KfW EH40 {zinssaetze.kfw.eh40_kfn}% | EH55 {zinssaetze.kfw.eh55_befristet}% | Markt {zinssaetze.markt.zehn_jahre}%
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="mb-8">
+                            <div className="flex justify-between mb-2">
+                                {[1, 2, 3, 4].map(step => (
+                                    <div key={step} className={`text-sm font-medium ${currentStep >= step ? 'text-blue-600' : 'text-gray-400'}`}>
+                                        Schritt {step}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                    className="progress-bar bg-blue-600 h-2 rounded-full"
+                                    style={{ width: `${progress}%` }}
+                                ></div>
+                            </div>
+                        </div>
+
+                        {/* Main Card */}
+                        <div className="bg-white rounded-lg shadow-lg p-8 fade-in">
+                            {currentStep === 1 && (
+                                <Step1Projekt 
+                                    formData={formData} 
+                                    updateFormData={updateFormData}
+                                    nextStep={nextStep}
+                                />
+                            )}
+                            
+                            {currentStep === 2 && (
+                                <Step2Status 
+                                    formData={formData} 
+                                    updateFormData={updateFormData}
+                                    nextStep={nextStep}
+                                    prevStep={prevStep}
+                                />
+                            )}
+                            
+                            {currentStep === 3 && (
+                                <Step3Technik 
+                                    formData={formData} 
+                                    updateFormData={updateFormData}
+                                    nextStep={nextStep}
+                                    prevStep={prevStep}
+                                />
+                            )}
+                            
+                            {currentStep === 4 && (
+                                <Step4Ergebnis 
+                                    formData={formData}
+                                    validationResult={validationResult}
+                                    financialResult={financialResult}
+                                    updateFormData={updateFormData}
+                                    prevStep={prevStep}
+                                    resetCalculator={resetCalculator}
+                                />
+                            )}
+                        </div>
+
+                        {/* Disclaimer */}
+                        <div className="mt-6 text-center text-sm text-gray-500 max-w-3xl mx-auto">
+                            <p className="mb-2">
+                                <strong>Wichtiger Hinweis:</strong> Alle Angaben ohne Gewähr. 
+                                Die hier berechneten Werte sind Modellrechnungen und ersetzen keine verbindliche Bankauskunft. 
+                            </p>
+                            <p>
+                                Stand der Zinsdaten: Februar 2026. Die finale Förderfähigkeit muss durch einen 
+                                Energie-Effizienz-Experten bestätigt werden.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ==================== STEP 1: PROJEKT ====================
+        function Step1Projekt({ formData, updateFormData, nextStep }) {
+            const canProceed = formData.usage && formData.wohneinheiten > 0;
+
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                        Schritt 1: Projektdaten
+                    </h2>
+
+                    <div className="space-y-6">
+                        {/* Nutzungsart */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                Wie wird die Immobilie genutzt?
+                            </label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => updateFormData('usage', 'selbstgenutzt')}
+                                    className={`p-6 border-2 rounded-lg text-left transition-all ${
+                                        formData.usage === 'selbstgenutzt'
+                                            ? 'border-blue-600 bg-blue-50'
+                                            : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <div className="font-bold text-lg mb-2">🏠 Ich ziehe selbst ein</div>
+                                    <div className="text-sm text-gray-600">
+                                        Für Eigennutzer (KfW Programm 297)
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => updateFormData('usage', 'vermietet')}
+                                    className={`p-6 border-2 rounded-lg text-left transition-all ${
+                                        formData.usage === 'vermietet'
+                                            ? 'border-blue-600 bg-blue-50'
+                                            : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <div className="font-bold text-lg mb-2">🏢 Ich vermiete</div>
+                                    <div className="text-sm text-gray-600">
+                                        Für Investoren und Vermieter (KfW Programm 298)
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Anzahl Wohneinheiten */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Anzahl der Wohneinheiten
+                            </label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={formData.wohneinheiten}
+                                onChange={(e) => updateFormData('wohneinheiten', parseInt(e.target.value) || 1)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            <p className="mt-2 text-sm text-gray-500">
+                                Die Fördergrenze gilt pro Wohneinheit (max. 100.000 € bzw. 150.000 € mit QNG)
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex justify-end">
+                        <button
+                            onClick={nextStep}
+                            disabled={!canProceed}
+                            className={`px-8 py-3 rounded-lg font-semibold transition-all ${
+                                canProceed
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
+                        >
+                            Weiter →
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // ==================== STEP 2: STATUS ====================
+        function Step2Status({ formData, updateFormData, nextStep, prevStep }) {
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                        Schritt 2: Projektstatus
+                    </h2>
+
+                    <div className="space-y-6">
+                        {/* Baugenehmigung */}
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                            <label className="flex items-start space-x-3">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.hasPermit}
+                                    onChange={(e) => updateFormData('hasPermit', e.target.checked)}
+                                    className="mt-1 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <div className="flex-1">
+                                    <span className="font-semibold text-gray-900">
+                                        Liegt eine Baugenehmigung vor?
+                                    </span>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        Wichtig für die befristete EH 55-Förderung. Bei EH 40 optional.
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+
+                        {/* Baubeginn */}
+                        <div className="p-4 bg-red-50 rounded-lg border-2 border-red-200">
+                            <label className="flex items-start space-x-3">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.constructionStarted}
+                                    onChange={(e) => updateFormData('constructionStarted', e.target.checked)}
+                                    className="mt-1 h-5 w-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                                />
+                                <div className="flex-1">
+                                    <span className="font-semibold text-gray-900">
+                                        Wurde mit dem Bau bereits begonnen?
+                                    </span>
+                                    <p className="text-sm text-red-600 mt-1">
+                                        ⚠️ ACHTUNG: Ein Baubeginn vor Antragstellung führt zum Ausschluss der Förderung!
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+
+                        {formData.constructionStarted && (
+                            <div className="p-4 bg-red-100 border-l-4 border-red-500">
+                                <div className="flex">
+                                    <div className="flex-shrink-0">
+                                        <span className="text-2xl">❌</span>
+                                    </div>
+                                    <div className="ml-3">
+                                        <h3 className="text-sm font-bold text-red-800">
+                                            Nicht förderfähig
+                                        </h3>
+                                        <p className="text-sm text-red-700 mt-1">
+                                            Wenn der Bau bereits begonnen hat, kann keine KfW-Förderung mehr beantragt werden. 
+                                            Die Antragstellung muss VOR Baubeginn erfolgen.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mt-8 flex justify-between">
+                        <button
+                            onClick={prevStep}
+                            className="px-8 py-3 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                        >
+                            ← Zurück
+                        </button>
+                        <button
+                            onClick={nextStep}
+                            className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
+                        >
+                            Weiter →
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // ==================== STEP 3: TECHNIK ====================
+        function Step3Technik({ formData, updateFormData, nextStep, prevStep }) {
+            const canProceed = formData.standard && formData.heating;
+
+            const heatingOptions = [
+                { 
+                    value: 'wp', 
+                    label: 'Wärmepumpe', 
+                    emoji: '♨️',
+                    description: 'Luft-, Erd- oder Wasserwärmepumpe',
+                    compatible: ['eh40', 'eh55']
+                },
+                { 
+                    value: 'fernwaerme', 
+                    label: 'Fernwärme', 
+                    emoji: '🏭',
+                    description: 'Wenn zu mind. 75% aus erneuerbaren Energien',
+                    compatible: ['eh40', 'eh55']
+                },
+                { 
+                    value: 'biomasse', 
+                    label: 'Biomasse', 
+                    emoji: '🌳',
+                    description: 'Pellets, Hackschnitzel, Scheitholz',
+                    compatible: ['eh55'],
+                    warning: 'Im KFN-Programm (EH 40) meist ausgeschlossen!'
+                },
+                { 
+                    value: 'gas', 
+                    label: 'Gasheizung', 
+                    emoji: '🔥',
+                    description: 'Erdgas, Flüssiggas',
+                    compatible: [],
+                    blocked: true
+                },
+                { 
+                    value: 'oel', 
+                    label: 'Ölheizung', 
+                    emoji: '🛢️',
+                    description: 'Heizöl',
+                    compatible: [],
+                    blocked: true
+                }
+            ];
+
+            const isHeatingCompatible = (heatingValue) => {
+                const option = heatingOptions.find(h => h.value === heatingValue);
+                if (!option) return true;
+                if (option.blocked) return false;
+                return option.compatible.includes(formData.standard);
+            };
+
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                        Schritt 3: Technische Ausstattung
+                    </h2>
+
+                    <div className="space-y-6">
+                        {/* Energetischer Standard */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                Welchen Effizienzhaus-Standard planen Sie?
+                                <InfoTooltip text="EH 40 ist der Goldstandard mit höchsten Anforderungen. EH 55 ist eine befristete Förderung für bereits genehmigte Projekte." />
+                            </label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => updateFormData('standard', 'eh40')}
+                                    className={`p-6 border-2 rounded-lg text-left transition-all ${
+                                        formData.standard === 'eh40'
+                                            ? 'border-green-600 bg-green-50'
+                                            : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <div className="font-bold text-lg mb-2">
+                                        ⭐ Effizienzhaus 40 (EH 40)
+                                    </div>
+                                    <div className="text-sm text-gray-600 mb-2">
+                                        Klimafreundlicher Neubau - Dauerhaftes Programm
+                                    </div>
+                                    <div className="text-xs text-green-700 font-semibold">
+                                        Zins: ab 2,45% | Max. 100.000 € (150.000 € mit QNG)
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => updateFormData('standard', 'eh55')}
+                                    className={`p-6 border-2 rounded-lg text-left transition-all ${
+                                        formData.standard === 'eh55'
+                                            ? 'border-blue-600 bg-blue-50'
+                                            : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <div className="font-bold text-lg mb-2">
+                                        ⏰ Effizienzhaus 55 (EH 55)
+                                    </div>
+                                    <div className="text-sm text-gray-600 mb-2">
+                                        Befristetes Programm (nur bei vorliegender Genehmigung)
+                                    </div>
+                                    <div className="text-xs text-blue-700 font-semibold">
+                                        Zins: ab 1,94% | Max. 100.000 €
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Heizungssystem */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                Welches Heizungssystem ist geplant?
+                            </label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {heatingOptions.map(option => {
+                                    const isCompatible = option.compatible.includes(formData.standard);
+                                    const isBlocked = option.blocked;
+                                    const isSelected = formData.heating === option.value;
+
+                                    return (
+                                        <button
+                                            key={option.value}
+                                            onClick={() => !isBlocked && updateFormData('heating', option.value)}
+                                            disabled={isBlocked}
+                                            className={`p-4 border-2 rounded-lg text-left transition-all ${
+                                                isSelected
+                                                    ? 'border-blue-600 bg-blue-50'
+                                                    : isBlocked
+                                                    ? 'border-red-200 bg-red-50 opacity-60 cursor-not-allowed'
+                                                    : !isCompatible
+                                                    ? 'border-orange-200 bg-orange-50'
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="font-semibold">
+                                                    {option.emoji} {option.label}
+                                                </span>
+                                                {isBlocked && <span className="text-red-600 font-bold">❌</span>}
+                                                {!isBlocked && !isCompatible && <span className="text-orange-600 font-bold">⚠️</span>}
+                                            </div>
+                                            <div className="text-xs text-gray-600">
+                                                {option.description}
+                                            </div>
+                                            {option.warning && formData.standard === 'eh40' && (
+                                                <div className="mt-2 text-xs text-orange-700 font-semibold">
+                                                    {option.warning}
+                                                </div>
+                                            )}
+                                            {isBlocked && (
+                                                <div className="mt-2 text-xs text-red-700 font-semibold">
+                                                    Nicht förderfähig (fossil)
+                                                </div>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* PV-Anlage */}
+                        <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <label className="flex items-start space-x-3">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.pvPlanned}
+                                    onChange={(e) => updateFormData('pvPlanned', e.target.checked)}
+                                    className="mt-1 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <div className="flex-1">
+                                    <span className="font-semibold text-gray-900">
+                                        Photovoltaik-Anlage geplant
+                                        <InfoTooltip text="Eine PV-Anlage verbessert die Energiebilanz deutlich und erleichtert die Erreichung des EH 40 Standards." />
+                                    </span>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        Stark empfohlen für EH 40 (verbessert Primärenergiebilanz)
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+
+                        {/* Lüftungsanlage */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                Lüftungskonzept
+                                <InfoTooltip text="Eine Lüftungsanlage mit Wärmerückgewinnung ist für EH 40 praktisch zwingend erforderlich." />
+                            </label>
+                            <select
+                                value={formData.ventilation}
+                                onChange={(e) => updateFormData('ventilation', e.target.value)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="">Bitte wählen...</option>
+                                <option value="central_wrg">Zentrale Lüftungsanlage mit Wärmerückgewinnung (WRG)</option>
+                                <option value="decentral">Dezentrale Lüftungsgeräte</option>
+                                <option value="window">Fensterlüftung</option>
+                            </select>
+                            {formData.standard === 'eh40' && formData.ventilation === 'window' && (
+                                <p className="mt-2 text-sm text-orange-600">
+                                    ⚠️ Ohne Lüftungsanlage mit WRG ist EH 40 technisch sehr schwer erreichbar!
+                                </p>
+                            )}
+                        </div>
+
+                        {/* QNG-Siegel */}
+                        <div className="p-4 bg-green-50 rounded-lg border-2 border-green-200">
+                            <label className="flex items-start space-x-3">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.qngPlanned}
+                                    onChange={(e) => updateFormData('qngPlanned', e.target.checked)}
+                                    disabled={formData.standard !== 'eh40'}
+                                    className="mt-1 h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500 disabled:opacity-50"
+                                />
+                                <div className="flex-1">
+                                    <span className="font-semibold text-gray-900">
+                                        QNG-Nachhaltigkeitszertifizierung geplant
+                                        <InfoTooltip text="Das Qualitätssiegel Nachhaltiges Gebäude (QNG) erhöht den maximalen Kreditbetrag von 100.000 € auf 150.000 € pro Wohneinheit!" />
+                                    </span>
+                                    <p className="text-sm text-green-700 mt-1 font-semibold">
+                                        💰 Erhöht Ihr Kreditlimit um 50.000 € pro Wohneinheit!
+                                    </p>
+                                    {formData.standard !== 'eh40' && (
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            (Nur für EH 40 verfügbar)
+                                        </p>
+                                    )}
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex justify-between">
+                        <button
+                            onClick={prevStep}
+                            className="px-8 py-3 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                        >
+                            ← Zurück
+                        </button>
+                        <button
+                            onClick={nextStep}
+                            disabled={!canProceed}
+                            className={`px-8 py-3 rounded-lg font-semibold transition-all ${
+                                canProceed
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
+                        >
+                            Berechnen →
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // ==================== STEP 4: ERGEBNIS ====================
+        function Step4Ergebnis({ formData, validationResult, financialResult, updateFormData, prevStep, resetCalculator }) {
+            if (!validationResult) {
+                return <div>Berechnung läuft...</div>;
+            }
+
+            const maxKreditGesamt = validationResult.maxKredit * formData.wohneinheiten;
+            const actualKredit = financialResult ? financialResult.gesamtKredit : 0;
+
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                        Ihr Förder-Ergebnis
+                    </h2>
+
+                    {!validationResult.eligible ? (
+                        // Nicht förderfähig
+                        <div className="space-y-6">
+                            <div className="p-6 bg-red-100 border-l-4 border-red-500 rounded-lg">
+                                <div className="flex">
+                                    <div className="flex-shrink-0">
+                                        <span className="text-4xl">❌</span>
+                                    </div>
+                                    <div className="ml-4">
+                                        <h3 className="text-xl font-bold text-red-800 mb-2">
+                                            Leider nicht förderfähig
+                                        </h3>
+                                        <p className="text-red-700">
+                                            {validationResult.reason}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between">
+                                <button
+                                    onClick={prevStep}
+                                    className="px-8 py-3 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                                >
+                                    ← Zurück
+                                </button>
+                                <button
+                                    onClick={resetCalculator}
+                                    className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
+                                >
+                                    Neu berechnen
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        // Förderfähig
+                        <div className="space-y-6">
+                            {/* Erfolgsmeldung */}
+                            <div className="p-6 bg-green-100 border-l-4 border-green-500 rounded-lg">
+                                <div className="flex">
+                                    <div className="flex-shrink-0">
+                                        <span className="text-4xl">✅</span>
+                                    </div>
+                                    <div className="ml-4 flex-1">
+                                        <h3 className="text-xl font-bold text-green-800 mb-2">
+                                            Herzlichen Glückwunsch! Ihr Projekt ist förderfähig
+                                        </h3>
+                                        <p className="text-green-700 font-semibold">
+                                            Programm: {validationResult.program}
+                                        </p>
+                                        <p className="text-green-700">
+                                            KfW {formData.usage === 'selbstgenutzt' ? '297' : '298'} - KfW-Zinssatz: {validationResult.zinssatz}%
+                                        </p>
+                                        {validationResult.bonus && (
+                                            <p className="text-green-800 font-bold mt-2">
+                                                🎉 {validationResult.bonus}
+                                            </p>
+                                        )}
+                                        {validationResult.warning && (
+                                            <p className="text-orange-700 mt-2">
+                                                ℹ️ {validationResult.warning}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Kreditbetrag eingeben */}
+                            <div className="p-6 bg-gray-50 rounded-lg">
+                                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                    Gewünschter Kreditbetrag
+                                </label>
+                                <div className="flex items-center space-x-4">
+                                    <input
+                                        type="number"
+                                        min="10000"
+                                        max={maxKreditGesamt}
+                                        step="5000"
+                                        value={formData.kreditwunsch}
+                                        onChange={(e) => updateFormData('kreditwunsch', parseInt(e.target.value) || 0)}
+                                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-semibold"
+                                    />
+                                    <span className="text-lg font-semibold text-gray-700">€</span>
+                                </div>
+                                <p className="mt-2 text-sm text-gray-600">
+                                    Maximaler Kreditbetrag für Ihr Projekt: {maxKreditGesamt.toLocaleString('de-DE')} €
+                                    ({formData.wohneinheiten} WE × {validationResult.maxKredit.toLocaleString('de-DE')} €)
+                                </p>
+                                {formData.kreditwunsch > maxKreditGesamt && (
+                                    <p className="mt-2 text-sm text-orange-600 font-semibold">
+                                        ⚠️ Der gewünschte Betrag überschreitet die Fördergrenze. Es werden maximal {maxKreditGesamt.toLocaleString('de-DE')} € berechnet.
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Finanzvergleich */}
+                            {financialResult && (
+                                <div className="space-y-6">
+                                    <h3 className="text-xl font-bold text-gray-900">
+                                        💰 Ihr KfW-Vorteil im Detail
+                                    </h3>
+
+                                    {/* Vergleichstabelle */}
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-100">
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                                                        Vergleichspunkt
+                                                    </th>
+                                                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                                                        Hausbank (Interhyp)
+                                                    </th>
+                                                    <th className="px-4 py-3 text-center text-sm font-semibold text-green-700">
+                                                        KfW {formData.usage === 'selbstgenutzt' ? '297' : '298'}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-center text-sm font-semibold text-blue-700">
+                                                        Ihre Ersparnis
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                <tr>
+                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                        Kreditbetrag
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm text-gray-700">
+                                                        {financialResult.gesamtKredit.toLocaleString('de-DE')} €
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm text-gray-700">
+                                                        {financialResult.gesamtKredit.toLocaleString('de-DE')} €
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm text-gray-400">
+                                                        -
+                                                    </td>
+                                                </tr>
+                                                <tr className="bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                        Zinssatz (10 Jahre)
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm text-gray-700">
+                                                        {financialResult.markt.zinssatz.toFixed(2)}%
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm font-semibold text-green-700">
+                                                        {financialResult.kfw.zinssatz.toFixed(2)}%
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm font-semibold text-blue-700">
+                                                        -{(financialResult.markt.zinssatz - financialResult.kfw.zinssatz).toFixed(2)}%
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                        Monatliche Rate
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm text-gray-700">
+                                                        {financialResult.markt.monatlicheRate.toFixed(2)} €
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm font-semibold text-green-700">
+                                                        {financialResult.kfw.monatlicheRate.toFixed(2)} €
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm font-semibold text-blue-700">
+                                                        -{financialResult.ersparnis.monatlich.toFixed(2)} €
+                                                    </td>
+                                                </tr>
+                                                <tr className="bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                        Zinsen im 1. Jahr
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm text-gray-700">
+                                                        {financialResult.markt.zinsJahr1.toFixed(0)} €
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm font-semibold text-green-700">
+                                                        {financialResult.kfw.zinsJahr1.toFixed(0)} €
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-sm text-gray-400">
+                                                        -
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Gesamtersparnis Highlight */}
+                                    <div className="p-6 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white">
+                                        <div className="text-center">
+                                            <div className="text-sm font-semibold mb-2">
+                                                Ihre Gesamtersparnis über 10 Jahre Zinsbindung
+                                            </div>
+                                            <div className="text-5xl font-bold mb-2">
+                                                {financialResult.ersparnis.ueber10Jahre.toFixed(0).toLocaleString('de-DE')} €
+                                            </div>
+                                            <div className="text-sm opacity-90">
+                                                Das entspricht {financialResult.ersparnis.monatlich.toFixed(2)} € mehr Liquidität pro Monat
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Visualisierung */}
+                                    <div className="p-6 bg-gray-50 rounded-lg">
+                                        <h4 className="text-sm font-semibold text-gray-700 mb-4">
+                                            Zinskosten-Vergleich über 10 Jahre
+                                        </h4>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <div className="flex justify-between mb-1">
+                                                    <span className="text-sm text-gray-600">Hausbank</span>
+                                                    <span className="text-sm font-semibold text-gray-900">
+                                                        {(financialResult.markt.zinsJahr1 * 10).toFixed(0).toLocaleString('de-DE')} €
+                                                    </span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 rounded-full h-6">
+                                                    <div 
+                                                        className="bg-red-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                                        style={{ width: '100%' }}
+                                                    >
+                                                        <span className="text-xs font-semibold text-white">
+                                                            {financialResult.markt.zinssatz.toFixed(2)}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="flex justify-between mb-1">
+                                                    <span className="text-sm text-gray-600">KfW</span>
+                                                    <span className="text-sm font-semibold text-green-700">
+                                                        {(financialResult.kfw.zinsJahr1 * 10).toFixed(0).toLocaleString('de-DE')} €
+                                                    </span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 rounded-full h-6">
+                                                    <div 
+                                                        className="bg-green-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                                        style={{ 
+                                                            width: `${(financialResult.kfw.zinssatz / financialResult.markt.zinssatz) * 100}%` 
+                                                        }}
+                                                    >
+                                                        <span className="text-xs font-semibold text-white">
+                                                            {financialResult.kfw.zinssatz.toFixed(2)}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-4">
+                                            * Vereinfachte Darstellung ohne Berücksichtigung des Tilgungseffekts. 
+                                            Die tatsächliche Ersparnis kann durch Sondertilgungen variieren.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Call to Action */}
+                            <div className="p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                                <h4 className="font-bold text-blue-900 mb-2">
+                                    📋 Nächste Schritte
+                                </h4>
+                                <ol className="list-decimal list-inside space-y-2 text-sm text-blue-800">
+                                    <li>Kontaktieren Sie einen zertifizierten Energie-Effizienz-Experten</li>
+                                    <li>Lassen Sie die technische Machbarkeit bestätigen</li>
+                                    <li>Stellen Sie den KfW-Antrag VOR Baubeginn über Ihre Hausbank</li>
+                                    <li>Nach Zusage: Bauvorhaben starten und Förderung nutzen</li>
+                                </ol>
+                                <div className="mt-4">
+                                    <a 
+                                        href="https://www.energie-effizienz-experten.de/" 
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
+                                    >
+                                        Experten finden →
+                                    </a>
+                                </div>
+                            </div>
+
+                            {/* Buttons */}
+                            <div className="flex justify-between">
+                                <button
+                                    onClick={prevStep}
+                                    className="px-8 py-3 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                                >
+                                    ← Zurück
+                                </button>
+                                <button
+                                    onClick={resetCalculator}
+                                    className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
+                                >
+                                    Neu berechnen
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // ==================== HILFSFUNKTIONEN ====================
+        function InfoTooltip({ text }) {
+            return (
+                <span className="tooltip ml-1">
+                    <span className="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-blue-500 rounded-full cursor-help">
+                        ?
+                    </span>
+                    <span className="tooltiptext">{text}</span>
+                </span>
+            );
+        }
+
+        // ==================== APP MOUNT ====================
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<KfWRechner />);
+    </script>
+</body>
+</html>

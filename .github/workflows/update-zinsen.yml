@@ -1,0 +1,34 @@
+name: Update KfW Zinssätze
+
+on:
+  schedule:
+    # Täglich um 6:00 Uhr UTC (7:00 MEZ / 8:00 MESZ)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Manueller Start möglich
+
+jobs:
+  update-zinsen:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: |
+          pip install requests beautifulsoup4 lxml
+          
+      - name: Scrape KfW Zinssätze
+        run: python scraper.py
+        
+      - name: Commit und Push falls Änderungen
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add zinssaetze.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 Auto-Update: KfW Zinssätze aktualisiert [$(date +'%Y-%m-%d')]" && git push)
