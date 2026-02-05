@@ -233,11 +233,16 @@
             const [validationResult, setValidationResult] = useState(null);
             const [financialResult, setFinancialResult] = useState(null);
 
-            // Zinssätze beim Start laden
+            // Zinssätze beim Start laden (von GitHub oder lokal)
             useEffect(() => {
-                fetch('./zinssaetze.json')
+                // Primär: Von GitHub laden (immer aktuell)
+                const githubUrl = 'https://raw.githubusercontent.com/EABGmbH/neubau297298/main/zinssaetze.json';
+                const localUrl = './zinssaetze.json';
+                
+                // Versuche erst GitHub, dann lokal als Fallback
+                fetch(githubUrl)
                     .then(response => {
-                        if (!response.ok) throw new Error('Zinssätze-Datei nicht gefunden');
+                        if (!response.ok) throw new Error('GitHub nicht erreichbar');
                         return response.json();
                     })
                     .then(data => {
@@ -249,12 +254,34 @@
                             }
                         });
                         setZinssaetzeLoading(false);
+                        console.log('✅ Zinssätze von GitHub geladen (Stand: ' + data.stand + ')');
                     })
                     .catch(error => {
-                        console.warn('Zinssätze konnten nicht geladen werden, nutze Fallback-Werte:', error);
-                        setZinssaetze(DEFAULT_ZINSSAETZE);
-                        setZinssaetzeError('Zinssätze verwenden Fallback-Werte');
-                        setZinssaetzeLoading(false);
+                        console.warn('GitHub nicht erreichbar, versuche lokale Datei...', error);
+                        // Fallback: Lokale Datei
+                        fetch(localUrl)
+                            .then(response => {
+                                if (!response.ok) throw new Error('Auch lokale Datei nicht gefunden');
+                                return response.json();
+                            })
+                            .then(data => {
+                                setZinssaetze({
+                                    markt: { zehn_jahre: data.markt.zehn_jahre_unter_90 },
+                                    kfw: { 
+                                        eh40_kfn: data.kfw.eh40_kfn,
+                                        eh55_befristet: data.kfw.eh55_befristet
+                                    }
+                                });
+                                setZinssaetzeLoading(false);
+                                setZinssaetzeError('Lokale Zinssätze (GitHub offline)');
+                                console.log('⚠️ Zinssätze von lokaler Datei geladen');
+                            })
+                            .catch(localError => {
+                                console.error('Beide Quellen fehlgeschlagen, nutze Fallback-Werte');
+                                setZinssaetze(DEFAULT_ZINSSAETZE);
+                                setZinssaetzeError('Zinssätze verwenden Fallback-Werte');
+                                setZinssaetzeLoading(false);
+                            });
                     });
             }, []);
 
