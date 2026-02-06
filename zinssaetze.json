@@ -1,13 +1,13 @@
 {
-  "stand": "2026-02-05",
+  "stand": "2026-02-06",
   "quelle": "KfW - Bitte aktualisieren Sie diese Werte regelmäßig von https://www.kfw.de",
   "markt": {
-    "zehn_jahre_unter_90": 3.65,
+    "zehn_jahre_unter_90": 3.94,
     "beschreibung": "Interhyp Benchmark für 10 Jahre Zinsbindung, Beleihung < 90%"
   },
   "kfw": {
-    "eh40_kfn": 2.45,
-    "eh55_befristet": 1.94,
+    "eh40_kfn": 1.36,
+    "eh55_befristet": 1.85,
     "beschreibung": "KfW Programme 297/298 - Zinssätze können sich täglich ändern",
     "hinweis": "Bitte prüfen Sie die aktuellen Konditionen auf www.kfw.de"
   },

@@ -7,23 +7,500 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .progress-bar {
-            transition: width 0.3s ease-in-out;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .fade-in {
-            animation: fadeIn 0.3s ease-in;
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #3b5748;
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: white;
         }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            color: white;
+            margin-bottom: 20px;
+            text-align: center;
+            padding: 15px 20px;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 8px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            font-size: 1em;
+            opacity: 0.95;
+            line-height: 1.3;
+        }
+
+        .zinssaetze-info {
+            margin-top: 10px;
+            font-size: 0.75em;
+            opacity: 0.85;
+        }
+
+        .calculator-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+            padding: 30px;
+            color: #333;
+            animation: fadeIn 0.5s ease-in;
+        }
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        .tooltip {
+
+        .progress-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            padding: 15px 10px;
+        }
+
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 70px;
+        }
+
+        .progress-dot {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            color: #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            border: 2px solid #e0e0e0;
+        }
+
+        .progress-step.active .progress-dot {
+            background: #50685b;
+            color: white;
+            border-color: #50685b;
+            transform: scale(1.1);
+        }
+
+        .progress-step.completed .progress-dot {
+            background: #4caf50;
+            color: white;
+            border-color: #4caf50;
+        }
+
+        .progress-step.completed .progress-dot::after {
+            content: '✓';
+            font-size: 1.5em;
+        }
+
+        .progress-label {
+            margin-top: 6px;
+            font-size: 0.75em;
+            color: #333;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .progress-step.active .progress-label {
+            color: #50685b;
+            font-weight: 700;
+        }
+
+        .progress-line {
+            flex: 1;
+            height: 2px;
+            background: #e0e0e0;
+            margin: 0 5px;
+            margin-bottom: 25px;
+            max-width: 60px;
+        }
+
+        .form-step {
+            display: none;
+        }
+
+        .form-step.active {
+            display: block;
+        }
+
+        .section-question {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #50685b;
+            margin-bottom: 25px;
+            text-align: left;
+            line-height: 1.3;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .option-card {
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 25px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .option-card:hover {
+            background: #e8f0ed;
+            border-color: #50685b;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(80, 104, 91, 0.2);
+        }
+
+        .option-card.selected {
+            background: #50685b;
+            border-color: #50685b;
+            color: white;
+            box-shadow: 0 5px 20px rgba(80, 104, 91, 0.4);
+        }
+
+        .option-card .card-icon {
+            font-size: 2.5em;
+            margin-bottom: 12px;
+        }
+
+        .option-card .card-label {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            line-height: 1.3;
+        }
+
+        .option-card.selected .card-label {
+            color: white;
+        }
+
+        .option-card .card-description {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .option-card.selected .card-description {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1em;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #50685b;
+            box-shadow: 0 0 0 3px rgba(80, 104, 91, 0.1);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-label:hover {
+            background: #e8f0ed;
+            border-color: #50685b;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+            accent-color: #50685b;
+            flex-shrink: 0;
+        }
+
+        .step-navigation {
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .btn-navigate {
+            padding: 14px 35px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-previous {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-previous:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-next {
+            background: #50685b;
+            color: white;
+        }
+
+        .btn-next:hover {
+            background: #42574c;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(80, 104, 91, 0.4);
+        }
+
+        .btn-next:disabled {
+            background: #e0e0e0;
+            color: #999;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-restart {
+            background: #50685b;
+            color: white;
+        }
+
+        .btn-restart:hover {
+            background: #42574c;
+        }
+
+        .alert-box {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid;
+        }
+
+        .alert-error {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+
+        .alert-warning {
+            background: #fff3e0;
+            border-color: #ff9800;
+            color: #e65100;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #1b5e20;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border-color: #2196F3;
+            color: #1565c0;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 3px solid #f0f0f0;
+        }
+
+        .result-highlight {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            margin: 20px 0;
+            padding: 30px;
+            border-radius: 12px;
+            border-left: 6px solid #4caf50;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .result-highlight h2 {
+            color: #1b5e20;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .result-highlight .big-number {
+            font-size: 3em;
+            font-weight: 700;
+            color: #1b5e20;
+            margin: 15px 0;
+        }
+
+        .result-highlight p {
+            color: #2e7d32;
+            font-size: 1.1em;
+            font-weight: 500;
+            line-height: 1.6;
+        }
+
+        .result-card {
+            background: #f0f5f2;
+            border-radius: 10px;
+            padding: 25px;
+            border-left: 4px solid #50685b;
+            margin-bottom: 20px;
+        }
+
+        .result-card h3 {
+            color: #50685b;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 500;
+            font-size: 1em;
+            color: #555;
+        }
+
+        .result-value {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #50685b;
+        }
+
+        .comparison-bar {
+            margin: 20px 0;
+        }
+
+        .comparison-item {
+            margin-bottom: 20px;
+        }
+
+        .comparison-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .bar-background {
+            width: 100%;
+            height: 35px;
+            background: #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: width 0.8s ease;
+        }
+
+        .bar-fill.market {
+            background: #e57373;
+        }
+
+        .bar-fill.kfw {
+            background: #66bb6a;
+        }
+
+        .info-tooltip {
             position: relative;
             display: inline-block;
+            cursor: help;
+            margin-left: 5px;
         }
-        .tooltip .tooltiptext {
+
+        .info-tooltip .tooltip-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background: #50685b;
+            color: white;
+            border-radius: 50%;
+            font-size: 0.7em;
+            font-weight: 700;
+        }
+
+        .info-tooltip .tooltiptext {
             visibility: hidden;
             width: 280px;
             background-color: #1f2937;
@@ -41,28 +518,110 @@
             font-size: 0.875rem;
             line-height: 1.4;
         }
-        .tooltip:hover .tooltiptext {
+
+        .info-tooltip:hover .tooltiptext {
             visibility: visible;
             opacity: 1;
         }
+
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            border: 4px solid #e0e0e0;
+            border-top: 4px solid #50685b;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .disclaimer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px 10px;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .subtitle {
+                font-size: 0.9em;
+            }
+
+            .calculator-card {
+                padding: 20px;
+            }
+
+            .section-question {
+                font-size: 1.1em;
+            }
+
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .step-navigation {
+                flex-direction: column;
+            }
+
+            .btn-navigate {
+                width: 100%;
+            }
+
+            .result-highlight .big-number {
+                font-size: 2.2em;
+            }
+
+            .progress-indicator {
+                overflow-x: auto;
+                justify-content: flex-start;
+            }
+
+            .progress-step {
+                min-width: 60px;
+            }
+
+            .progress-dot {
+                width: 35px;
+                height: 35px;
+                font-size: 0.9em;
+            }
+
+            .progress-label {
+                font-size: 0.7em;
+            }
+        }
     </style>
 </head>
-<body class="bg-gray-50">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // ==================== KONSTANTEN (werden aus JSON geladen) ====================
-        // Fallback-Werte falls JSON nicht ladbar
+        // ==================== KONSTANTEN ====================
         const DEFAULT_ZINSSAETZE = {
-            markt: {
-                zehn_jahre: 3.65
-            },
-            kfw: {
-                eh40_kfn: 2.45,
-                eh55_befristet: 1.94
-            }
+            markt: { zehn_jahre: 3.65 },
+            kfw: { eh40_kfn: 2.45, eh55_befristet: 1.94 }
         };
 
         const DEFAULT_FOERDERGRENZEN = {
@@ -75,15 +634,8 @@
         // ==================== BERECHNUNGS-ENGINE ====================
         class CalculationEngine {
             static validateEligibility(formData, zinssaetze = DEFAULT_ZINSSAETZE) {
-                const { 
-                    constructionStarted, 
-                    heating, 
-                    standard, 
-                    hasPermit, 
-                    qngPlanned 
-                } = formData;
+                const { constructionStarted, heating, standard, hasPermit, qngPlanned } = formData;
 
-                // Level 1: Knock-out Kriterien
                 if (constructionStarted) {
                     return {
                         eligible: false,
@@ -100,7 +652,6 @@
                     };
                 }
 
-                // Level 2: Standard-spezifische Prüfung
                 if (standard === "eh55") {
                     if (!hasPermit) {
                         return {
@@ -163,24 +714,19 @@
             }
 
             static calculateFinancials(kreditbetrag, wohneinheiten, kfwZins, zinssaetze = DEFAULT_ZINSSAETZE, tilgung = DEFAULT_TILGUNG) {
-                const gesamtKredit = Math.min(kreditbetrag, kreditbetrag); // Später mit WE multiplizieren falls nötig
+                const gesamtKredit = kreditbetrag;
                 const marktZins = zinssaetze.markt.zehn_jahre;
 
-                // Berechnung Marktdarlehen
                 const marktGesamtrate = (marktZins + tilgung) / 100;
                 const marktMonatlicheRate = (gesamtKredit * marktGesamtrate) / 12;
                 const marktZinsJahr1 = gesamtKredit * (marktZins / 100);
 
-                // Berechnung KfW-Darlehen
                 const kfwGesamtrate = (kfwZins + tilgung) / 100;
                 const kfwMonatlicheRate = (gesamtKredit * kfwGesamtrate) / 12;
                 const kfwZinsJahr1 = gesamtKredit * (kfwZins / 100);
 
-                // Vereinfachte Zinsersparnis über 10 Jahre (ohne Zinseszins der Tilgung)
                 const zinsdifferenz = marktZins - kfwZins;
                 const zinsersparnisGesamt = gesamtKredit * (zinsdifferenz / 100) * 10;
-
-                // Monatliche Ersparnis
                 const monatlicheErsparnis = marktMonatlicheRate - kfwMonatlicheRate;
 
                 return {
@@ -210,36 +756,28 @@
             const [zinssaetzeLoading, setZinssaetzeLoading] = useState(true);
             const [zinssaetzeError, setZinssaetzeError] = useState(null);
             const [formData, setFormData] = useState({
-                // Step 1: Projekt
                 usage: 'selbstgenutzt',
                 wohneinheiten: 1,
                 projectType: 'neubau',
-                
-                // Step 2: Status
                 hasPermit: false,
                 constructionStarted: false,
-                
-                // Step 3: Technik
-                standard: 'eh40',
+                standard: '',
                 heating: '',
-                pvPlanned: false,
+                pvPlanned: null,
+                batterySpeicher: null,
                 ventilation: '',
                 qngPlanned: false,
-                
-                // Step 4: Finanzen
                 kreditwunsch: 100000
             });
 
             const [validationResult, setValidationResult] = useState(null);
             const [financialResult, setFinancialResult] = useState(null);
 
-            // Zinssätze beim Start laden (von GitHub oder lokal)
+            // Zinssätze laden
             useEffect(() => {
-                // Primär: Von GitHub laden (immer aktuell)
                 const githubUrl = 'https://raw.githubusercontent.com/EABGmbH/neubau297298/main/zinssaetze.json';
                 const localUrl = './zinssaetze.json';
                 
-                // Versuche erst GitHub, dann lokal als Fallback
                 fetch(githubUrl)
                     .then(response => {
                         if (!response.ok) throw new Error('GitHub nicht erreichbar');
@@ -258,7 +796,6 @@
                     })
                     .catch(error => {
                         console.warn('GitHub nicht erreichbar, versuche lokale Datei...', error);
-                        // Fallback: Lokale Datei
                         fetch(localUrl)
                             .then(response => {
                                 if (!response.ok) throw new Error('Auch lokale Datei nicht gefunden');
@@ -285,11 +822,8 @@
                     });
             }, []);
 
-            const totalSteps = 4;
-            const progress = (currentStep / totalSteps) * 100;
-
             useEffect(() => {
-                if (currentStep === 4 && formData.heating && zinssaetze) {
+                if (currentStep === 5 && formData.heating && zinssaetze && formData.standard) {
                     const validation = CalculationEngine.validateEligibility(formData, zinssaetze);
                     setValidationResult(validation);
                     
@@ -312,7 +846,7 @@
             };
 
             const nextStep = () => {
-                if (currentStep < totalSteps) {
+                if (currentStep < 5) {
                     setCurrentStep(prev => prev + 1);
                 }
             };
@@ -331,9 +865,10 @@
                     projectType: 'neubau',
                     hasPermit: false,
                     constructionStarted: false,
-                    standard: 'eh40',
+                    standard: '',
                     heating: '',
-                    pvPlanned: false,
+                    pvPlanned: null,
+                    batterySpeicher: null,
                     ventilation: '',
                     qngPlanned: false,
                     kreditwunsch: 100000
@@ -342,111 +877,112 @@
                 setFinancialResult(null);
             };
 
-            // Ladebildschirm während Zinssätze geladen werden
             if (zinssaetzeLoading) {
                 return (
-                    <div className="min-h-screen py-8 px-4 flex items-center justify-center">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                            <p className="text-gray-600">Aktuelle Zinssätze werden geladen...</p>
+                    <div className="container">
+                        <div className="header">
+                            <h1>KfW Förderrechner 297/298</h1>
+                            <p className="subtitle">Klimafreundlicher Neubau</p>
+                        </div>
+                        <div className="calculator-card">
+                            <div className="loading-spinner">
+                                <div className="spinner"></div>
+                                <p style={{marginTop: '20px', color: '#666'}}>Aktuelle Zinssätze werden geladen...</p>
+                            </div>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="min-h-screen py-8 px-4">
-                    <div className="max-w-4xl mx-auto">
-                        {/* Header */}
-                        <div className="text-center mb-8">
-                            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                                KfW Förderrechner 297/298
-                            </h1>
-                            <p className="text-lg text-gray-600">
-                                Klimafreundlicher Neubau - Berechnen Sie Ihre Zinsvorteile
-                            </p>
+                <>
+                    <div className="container">
+                        <div className="header">
+                            <h1>KfW Förderrechner 297/298</h1>
+                            <p className="subtitle">Klimafreundlicher Neubau - Berechnen Sie Ihre Zinsvorteile</p>
                             {zinssaetzeError && (
-                                <div className="mt-2 text-sm text-orange-600">
+                                <div style={{marginTop: '10px', fontSize: '0.85em', color: '#ffc107'}}>
                                     ⚠️ {zinssaetzeError}
                                 </div>
                             )}
                             {zinssaetze && (
-                                <div className="mt-2 text-xs text-gray-500">
-                                    Zinssätze: KfW EH40 {zinssaetze.kfw.eh40_kfn}% | EH55 {zinssaetze.kfw.eh55_befristet}% | Markt {zinssaetze.markt.zehn_jahre}%
+                                <div className="zinssaetze-info">
+                                    Aktuelle Zinssätze: KfW EH40 {zinssaetze.kfw.eh40_kfn}% | EH55 {zinssaetze.kfw.eh55_befristet}% | Markt {zinssaetze.markt.zehn_jahre}%
                                 </div>
                             )}
                         </div>
 
-                        {/* Progress Bar */}
-                        <div className="mb-8">
-                            <div className="flex justify-between mb-2">
-                                {[1, 2, 3, 4].map(step => (
-                                    <div key={step} className={`text-sm font-medium ${currentStep >= step ? 'text-blue-600' : 'text-gray-400'}`}>
-                                        Schritt {step}
-                                    </div>
+                        <div className="calculator-card">
+                            <div className="progress-indicator">
+                                {[1, 2, 3, 4, 5].map(step => (
+                                    <React.Fragment key={step}>
+                                        <div className={`progress-step ${currentStep >= step ? 'active' : ''} ${currentStep > step ? 'completed' : ''}`}>
+                                            <div className="progress-dot">
+                                                {currentStep > step ? '' : step}
+                                            </div>
+                                            <div className="progress-label">
+                                                Schritt {step}
+                                            </div>
+                                        </div>
+                                        {step < 5 && <div className="progress-line"></div>}
+                                    </React.Fragment>
                                 ))}
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div 
-                                    className="progress-bar bg-blue-600 h-2 rounded-full"
-                                    style={{ width: `${progress}%` }}
-                                ></div>
-                            </div>
-                        </div>
 
-                        {/* Main Card */}
-                        <div className="bg-white rounded-lg shadow-lg p-8 fade-in">
-                            {currentStep === 1 && (
+                            <div className={`form-step ${currentStep === 1 ? 'active' : ''}`}>
                                 <Step1Projekt 
                                     formData={formData} 
                                     updateFormData={updateFormData}
                                     nextStep={nextStep}
                                 />
-                            )}
+                            </div>
                             
-                            {currentStep === 2 && (
+                            <div className={`form-step ${currentStep === 2 ? 'active' : ''}`}>
                                 <Step2Status 
                                     formData={formData} 
                                     updateFormData={updateFormData}
                                     nextStep={nextStep}
                                     prevStep={prevStep}
                                 />
-                            )}
+                            </div>
                             
-                            {currentStep === 3 && (
+                            <div className={`form-step ${currentStep === 3 ? 'active' : ''}`}>
                                 <Step3Technik 
                                     formData={formData} 
                                     updateFormData={updateFormData}
                                     nextStep={nextStep}
                                     prevStep={prevStep}
                                 />
-                            )}
+                            </div>
                             
-                            {currentStep === 4 && (
-                                <Step4Ergebnis 
+                            <div className={`form-step ${currentStep === 4 ? 'active' : ''}`}>
+                                <Step4PV 
+                                    formData={formData} 
+                                    updateFormData={updateFormData}
+                                    nextStep={nextStep}
+                                    prevStep={prevStep}
+                                />
+                            </div>
+                            
+                            <div className={`form-step ${currentStep === 5 ? 'active' : ''}`}>
+                                <Step5Ergebnis 
                                     formData={formData}
                                     validationResult={validationResult}
                                     financialResult={financialResult}
                                     updateFormData={updateFormData}
                                     prevStep={prevStep}
                                     resetCalculator={resetCalculator}
+                                    zinssaetze={zinssaetze}
                                 />
-                            )}
+                            </div>
                         </div>
 
-                        {/* Disclaimer */}
-                        <div className="mt-6 text-center text-sm text-gray-500 max-w-3xl mx-auto">
-                            <p className="mb-2">
-                                <strong>Wichtiger Hinweis:</strong> Alle Angaben ohne Gewähr. 
-                                Die hier berechneten Werte sind Modellrechnungen und ersetzen keine verbindliche Bankauskunft. 
-                            </p>
-                            <p>
-                                Stand der Zinsdaten: Februar 2026. Die finale Förderfähigkeit muss durch einen 
-                                Energie-Effizienz-Experten bestätigt werden.
-                            </p>
+                        <div className="disclaimer">
+                            <p><strong>Wichtiger Hinweis:</strong> Alle Angaben ohne Gewähr. Die hier berechneten Werte sind Modellrechnungen und ersetzen keine verbindliche Bankauskunft.</p>
+                            <p>Stand der Zinsdaten: Februar 2026. Die finale Förderfähigkeit muss durch einen Energie-Effizienz-Experten bestätigt werden.</p>
                         </div>
                     </div>
-                </div>
+                </>
             );
         }
 
@@ -456,75 +992,48 @@
 
             return (
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                        Schritt 1: Projektdaten
-                    </h2>
+                    <h2 className="section-question">Wie wird die Immobilie genutzt?</h2>
 
-                    <div className="space-y-6">
-                        {/* Nutzungsart */}
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-3">
-                                Wie wird die Immobilie genutzt?
-                            </label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <button
-                                    onClick={() => updateFormData('usage', 'selbstgenutzt')}
-                                    className={`p-6 border-2 rounded-lg text-left transition-all ${
-                                        formData.usage === 'selbstgenutzt'
-                                            ? 'border-blue-600 bg-blue-50'
-                                            : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <div className="font-bold text-lg mb-2">🏠 Ich ziehe selbst ein</div>
-                                    <div className="text-sm text-gray-600">
-                                        Für Eigennutzer (KfW Programm 297)
-                                    </div>
-                                </button>
-
-                                <button
-                                    onClick={() => updateFormData('usage', 'vermietet')}
-                                    className={`p-6 border-2 rounded-lg text-left transition-all ${
-                                        formData.usage === 'vermietet'
-                                            ? 'border-blue-600 bg-blue-50'
-                                            : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <div className="font-bold text-lg mb-2">🏢 Ich vermiete</div>
-                                    <div className="text-sm text-gray-600">
-                                        Für Investoren und Vermieter (KfW Programm 298)
-                                    </div>
-                                </button>
-                            </div>
+                    <div className="card-grid">
+                        <div
+                            onClick={() => updateFormData('usage', 'selbstgenutzt')}
+                            className={`option-card ${formData.usage === 'selbstgenutzt' ? 'selected' : ''}`}
+                        >
+                            <div className="card-icon">🏠</div>
+                            <div className="card-label">Ich ziehe selbst ein</div>
+                            <div className="card-description">Für Eigennutzer (KfW Programm 297)</div>
                         </div>
 
-                        {/* Anzahl Wohneinheiten */}
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Anzahl der Wohneinheiten
-                            </label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="20"
-                                value={formData.wohneinheiten}
-                                onChange={(e) => updateFormData('wohneinheiten', parseInt(e.target.value) || 1)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                            <p className="mt-2 text-sm text-gray-500">
-                                Die Fördergrenze gilt pro Wohneinheit (max. 100.000 € bzw. 150.000 € mit QNG)
-                            </p>
+                        <div
+                            onClick={() => updateFormData('usage', 'vermietet')}
+                            className={`option-card ${formData.usage === 'vermietet' ? 'selected' : ''}`}
+                        >
+                            <div className="card-icon">🏢</div>
+                            <div className="card-label">Ich vermiete</div>
+                            <div className="card-description">Für Investoren und Vermieter (KfW Programm 298)</div>
                         </div>
                     </div>
 
-                    <div className="mt-8 flex justify-end">
+                    <div className="form-group">
+                        <label>Anzahl der Wohneinheiten</label>
+                        <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={formData.wohneinheiten}
+                            onChange={(e) => updateFormData('wohneinheiten', parseInt(e.target.value) || 1)}
+                        />
+                        <p style={{marginTop: '8px', fontSize: '0.9em', color: '#666'}}>
+                            Die Fördergrenze gilt pro Wohneinheit (max. 100.000 € bzw. 150.000 € mit QNG)
+                        </p>
+                    </div>
+
+                    <div className="step-navigation">
+                        <div></div>
                         <button
                             onClick={nextStep}
                             disabled={!canProceed}
-                            className={`px-8 py-3 rounded-lg font-semibold transition-all ${
-                                canProceed
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            }`}
+                            className="btn-navigate btn-next"
                         >
                             Weiter →
                         </button>
@@ -537,82 +1046,61 @@
         function Step2Status({ formData, updateFormData, nextStep, prevStep }) {
             return (
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                        Schritt 2: Projektstatus
-                    </h2>
+                    <h2 className="section-question">Projektstatus</h2>
 
-                    <div className="space-y-6">
-                        {/* Baugenehmigung */}
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                            <label className="flex items-start space-x-3">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.hasPermit}
-                                    onChange={(e) => updateFormData('hasPermit', e.target.checked)}
-                                    className="mt-1 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <div className="flex-1">
-                                    <span className="font-semibold text-gray-900">
-                                        Liegt eine Baugenehmigung vor?
-                                    </span>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                        Wichtig für die befristete EH 55-Förderung. Bei EH 40 optional.
-                                    </p>
-                                </div>
-                            </label>
+                    <div className="checkbox-label" style={{background: formData.hasPermit ? '#e8f0ed' : 'white'}}>
+                        <input
+                            type="checkbox"
+                            checked={formData.hasPermit}
+                            onChange={(e) => updateFormData('hasPermit', e.target.checked)}
+                        />
+                        <div>
+                            <strong>Liegt bereits eine Baugenehmigung vor?</strong>
+                            <p style={{marginTop: '5px', fontSize: '0.9em', color: '#666'}}>
+                                Falls ja, stehen Ihnen möglicherweise zusätzliche Förderoptionen zur Verfügung.
+                            </p>
                         </div>
-
-                        {/* Baubeginn */}
-                        <div className="p-4 bg-red-50 rounded-lg border-2 border-red-200">
-                            <label className="flex items-start space-x-3">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.constructionStarted}
-                                    onChange={(e) => updateFormData('constructionStarted', e.target.checked)}
-                                    className="mt-1 h-5 w-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                                />
-                                <div className="flex-1">
-                                    <span className="font-semibold text-gray-900">
-                                        Wurde mit dem Bau bereits begonnen?
-                                    </span>
-                                    <p className="text-sm text-red-600 mt-1">
-                                        ⚠️ ACHTUNG: Ein Baubeginn vor Antragstellung führt zum Ausschluss der Förderung!
-                                    </p>
-                                </div>
-                            </label>
-                        </div>
-
-                        {formData.constructionStarted && (
-                            <div className="p-4 bg-red-100 border-l-4 border-red-500">
-                                <div className="flex">
-                                    <div className="flex-shrink-0">
-                                        <span className="text-2xl">❌</span>
-                                    </div>
-                                    <div className="ml-3">
-                                        <h3 className="text-sm font-bold text-red-800">
-                                            Nicht förderfähig
-                                        </h3>
-                                        <p className="text-sm text-red-700 mt-1">
-                                            Wenn der Bau bereits begonnen hat, kann keine KfW-Förderung mehr beantragt werden. 
-                                            Die Antragstellung muss VOR Baubeginn erfolgen.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
-                    <div className="mt-8 flex justify-between">
-                        <button
-                            onClick={prevStep}
-                            className="px-8 py-3 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all"
-                        >
+                    <div className="checkbox-label" style={{background: formData.constructionStarted ? '#fff3e0' : 'white', borderColor: formData.constructionStarted ? '#ff9800' : '#e0e0e0'}}>
+                        <input
+                            type="checkbox"
+                            checked={formData.constructionStarted}
+                            onChange={(e) => updateFormData('constructionStarted', e.target.checked)}
+                        />
+                        <div>
+                            <strong>Wurde mit dem Bau bereits begonnen?</strong>
+                            <p style={{marginTop: '5px', fontSize: '0.9em', color: '#e65100'}}>
+                                ⚠️ ACHTUNG: Ein Baubeginn vor Antragstellung führt zum Ausschluss der Förderung!
+                            </p>
+                        </div>
+                    </div>
+
+                    {formData.constructionStarted && (
+                        <div className="alert-box alert-error">
+                            <strong>❌ Nicht förderfähig</strong>
+                            <p style={{marginTop: '8px'}}>
+                                Wenn der Bau bereits begonnen hat, kann keine KfW-Förderung mehr beantragt werden. 
+                                Die Antragstellung muss VOR Baubeginn erfolgen.
+                            </p>
+                        </div>
+                    )}
+
+                    {!formData.constructionStarted && (
+                        <div className="alert-box alert-info" style={{marginTop: '20px'}}>
+                            <strong>ℹ️ Beide Angaben sind optional</strong>
+                            <p style={{marginTop: '8px'}}>
+                                Sie können auch ohne Angaben fortfahren - wir ermitteln dann im nächsten Schritt, 
+                                welche Förderoptionen für Sie infrage kommen.
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="step-navigation">
+                        <button onClick={prevStep} className="btn-navigate btn-previous">
                             ← Zurück
                         </button>
-                        <button
-                            onClick={nextStep}
-                            className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
-                        >
+                        <button onClick={nextStep} className="btn-navigate btn-next">
                             Weiter →
                         </button>
                     </div>
@@ -622,575 +1110,568 @@
 
         // ==================== STEP 3: TECHNIK ====================
         function Step3Technik({ formData, updateFormData, nextStep, prevStep }) {
-            const canProceed = formData.standard && formData.heating;
-
             const heatingOptions = [
-                { 
-                    value: 'wp', 
-                    label: 'Wärmepumpe', 
-                    emoji: '♨️',
-                    description: 'Luft-, Erd- oder Wasserwärmepumpe',
-                    compatible: ['eh40', 'eh55']
-                },
-                { 
-                    value: 'fernwaerme', 
-                    label: 'Fernwärme', 
-                    emoji: '🏭',
-                    description: 'Wenn zu mind. 75% aus erneuerbaren Energien',
-                    compatible: ['eh40', 'eh55']
-                },
-                { 
-                    value: 'biomasse', 
-                    label: 'Biomasse', 
-                    emoji: '🌳',
-                    description: 'Pellets, Hackschnitzel, Scheitholz',
-                    compatible: ['eh55'],
-                    warning: 'Im KFN-Programm (EH 40) meist ausgeschlossen!'
-                },
-                { 
-                    value: 'gas', 
-                    label: 'Gasheizung', 
-                    emoji: '🔥',
-                    description: 'Erdgas, Flüssiggas',
-                    compatible: [],
-                    blocked: true
-                },
-                { 
-                    value: 'oel', 
-                    label: 'Ölheizung', 
-                    emoji: '🛢️',
-                    description: 'Heizöl',
-                    compatible: [],
-                    blocked: true
-                }
+                { value: 'wp', label: 'Wärmepumpe', icon: '♨️', desc: 'Luft-, Erd- oder Wasser-WP', compatible: ['eh40', 'eh55'] },
+                { value: 'fernwaerme', label: 'Fernwärme', icon: '🏭', desc: '≥75% erneuerbar', compatible: ['eh40', 'eh55'] },
+                { value: 'biomasse', label: 'Biomasse', icon: '🌳', desc: 'Pellets, Hackschnitzel', compatible: ['eh55'] },
+                { value: 'gas', label: 'Gasheizung', icon: '🔥', desc: 'Nicht förderfähig', compatible: [], blocked: true },
+                { value: 'oel', label: 'Ölheizung', icon: '🛢️', desc: 'Nicht förderfähig', compatible: [], blocked: true }
             ];
 
-            const isHeatingCompatible = (heatingValue) => {
-                const option = heatingOptions.find(h => h.value === heatingValue);
-                if (!option) return true;
-                if (option.blocked) return false;
-                return option.compatible.includes(formData.standard);
-            };
+            const canProceed = formData.heating;
 
             return (
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                        Schritt 3: Technische Ausstattung
-                    </h2>
+                    <h2 className="section-question">Welches Heizungssystem ist geplant?</h2>
 
-                    <div className="space-y-6">
-                        {/* Energetischer Standard */}
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-3">
-                                Welchen Effizienzhaus-Standard planen Sie?
-                                <InfoTooltip text="EH 40 ist der Goldstandard mit höchsten Anforderungen. EH 55 ist eine befristete Förderung für bereits genehmigte Projekte." />
-                            </label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <button
-                                    onClick={() => updateFormData('standard', 'eh40')}
-                                    className={`p-6 border-2 rounded-lg text-left transition-all ${
-                                        formData.standard === 'eh40'
-                                            ? 'border-green-600 bg-green-50'
-                                            : 'border-gray-200 hover:border-gray-300'
-                                    }`}
+                    <div className="card-grid">
+                        {heatingOptions.map(option => {
+                            const isBlocked = option.blocked;
+                            const isSelected = formData.heating === option.value;
+
+                            return (
+                                <div
+                                    key={option.value}
+                                    onClick={() => {
+                                        if (!isBlocked) {
+                                            updateFormData('heating', option.value);
+                                        }
+                                    }}
+                                    className={`option-card ${isSelected ? 'selected' : ''}`}
+                                    style={{
+                                        opacity: isBlocked ? 0.5 : 1,
+                                        cursor: isBlocked ? 'not-allowed' : 'pointer',
+                                        borderColor: isBlocked ? '#e57373' : (isSelected ? '#50685b' : '#e0e0e0'),
+                                        background: isBlocked ? '#ffebee' : (isSelected ? '#50685b' : '#f5f5f5')
+                                    }}
                                 >
-                                    <div className="font-bold text-lg mb-2">
-                                        ⭐ Effizienzhaus 40 (EH 40)
-                                    </div>
-                                    <div className="text-sm text-gray-600 mb-2">
-                                        Klimafreundlicher Neubau - Dauerhaftes Programm
-                                    </div>
-                                    <div className="text-xs text-green-700 font-semibold">
-                                        Zins: ab 2,45% | Max. 100.000 € (150.000 € mit QNG)
-                                    </div>
-                                </button>
-
-                                <button
-                                    onClick={() => updateFormData('standard', 'eh55')}
-                                    className={`p-6 border-2 rounded-lg text-left transition-all ${
-                                        formData.standard === 'eh55'
-                                            ? 'border-blue-600 bg-blue-50'
-                                            : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <div className="font-bold text-lg mb-2">
-                                        ⏰ Effizienzhaus 55 (EH 55)
-                                    </div>
-                                    <div className="text-sm text-gray-600 mb-2">
-                                        Befristetes Programm (nur bei vorliegender Genehmigung)
-                                    </div>
-                                    <div className="text-xs text-blue-700 font-semibold">
-                                        Zins: ab 1,94% | Max. 100.000 €
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Heizungssystem */}
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-3">
-                                Welches Heizungssystem ist geplant?
-                            </label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {heatingOptions.map(option => {
-                                    const isCompatible = option.compatible.includes(formData.standard);
-                                    const isBlocked = option.blocked;
-                                    const isSelected = formData.heating === option.value;
-
-                                    return (
-                                        <button
-                                            key={option.value}
-                                            onClick={() => !isBlocked && updateFormData('heating', option.value)}
-                                            disabled={isBlocked}
-                                            className={`p-4 border-2 rounded-lg text-left transition-all ${
-                                                isSelected
-                                                    ? 'border-blue-600 bg-blue-50'
-                                                    : isBlocked
-                                                    ? 'border-red-200 bg-red-50 opacity-60 cursor-not-allowed'
-                                                    : !isCompatible
-                                                    ? 'border-orange-200 bg-orange-50'
-                                                    : 'border-gray-200 hover:border-gray-300'
-                                            }`}
-                                        >
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="font-semibold">
-                                                    {option.emoji} {option.label}
-                                                </span>
-                                                {isBlocked && <span className="text-red-600 font-bold">❌</span>}
-                                                {!isBlocked && !isCompatible && <span className="text-orange-600 font-bold">⚠️</span>}
-                                            </div>
-                                            <div className="text-xs text-gray-600">
-                                                {option.description}
-                                            </div>
-                                            {option.warning && formData.standard === 'eh40' && (
-                                                <div className="mt-2 text-xs text-orange-700 font-semibold">
-                                                    {option.warning}
-                                                </div>
-                                            )}
-                                            {isBlocked && (
-                                                <div className="mt-2 text-xs text-red-700 font-semibold">
-                                                    Nicht förderfähig (fossil)
-                                                </div>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* PV-Anlage */}
-                        <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                            <label className="flex items-start space-x-3">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.pvPlanned}
-                                    onChange={(e) => updateFormData('pvPlanned', e.target.checked)}
-                                    className="mt-1 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <div className="flex-1">
-                                    <span className="font-semibold text-gray-900">
-                                        Photovoltaik-Anlage geplant
-                                        <InfoTooltip text="Eine PV-Anlage verbessert die Energiebilanz deutlich und erleichtert die Erreichung des EH 40 Standards." />
-                                    </span>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                        Stark empfohlen für EH 40 (verbessert Primärenergiebilanz)
-                                    </p>
+                                    <div className="card-icon">{option.icon}</div>
+                                    <div className="card-label">{option.label}</div>
+                                    <div className="card-description">{option.desc}</div>
+                                    {isBlocked && <div style={{marginTop: '5px', color: '#c62828', fontSize: '0.85em', fontWeight: 600}}>❌ Ausgeschlossen</div>}
                                 </div>
-                            </label>
-                        </div>
-
-                        {/* Lüftungsanlage */}
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-3">
-                                Lüftungskonzept
-                                <InfoTooltip text="Eine Lüftungsanlage mit Wärmerückgewinnung ist für EH 40 praktisch zwingend erforderlich." />
-                            </label>
-                            <select
-                                value={formData.ventilation}
-                                onChange={(e) => updateFormData('ventilation', e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                                <option value="">Bitte wählen...</option>
-                                <option value="central_wrg">Zentrale Lüftungsanlage mit Wärmerückgewinnung (WRG)</option>
-                                <option value="decentral">Dezentrale Lüftungsgeräte</option>
-                                <option value="window">Fensterlüftung</option>
-                            </select>
-                            {formData.standard === 'eh40' && formData.ventilation === 'window' && (
-                                <p className="mt-2 text-sm text-orange-600">
-                                    ⚠️ Ohne Lüftungsanlage mit WRG ist EH 40 technisch sehr schwer erreichbar!
-                                </p>
-                            )}
-                        </div>
-
-                        {/* QNG-Siegel */}
-                        <div className="p-4 bg-green-50 rounded-lg border-2 border-green-200">
-                            <label className="flex items-start space-x-3">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.qngPlanned}
-                                    onChange={(e) => updateFormData('qngPlanned', e.target.checked)}
-                                    disabled={formData.standard !== 'eh40'}
-                                    className="mt-1 h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500 disabled:opacity-50"
-                                />
-                                <div className="flex-1">
-                                    <span className="font-semibold text-gray-900">
-                                        QNG-Nachhaltigkeitszertifizierung geplant
-                                        <InfoTooltip text="Das Qualitätssiegel Nachhaltiges Gebäude (QNG) erhöht den maximalen Kreditbetrag von 100.000 € auf 150.000 € pro Wohneinheit!" />
-                                    </span>
-                                    <p className="text-sm text-green-700 mt-1 font-semibold">
-                                        💰 Erhöht Ihr Kreditlimit um 50.000 € pro Wohneinheit!
-                                    </p>
-                                    {formData.standard !== 'eh40' && (
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            (Nur für EH 40 verfügbar)
-                                        </p>
-                                    )}
-                                </div>
-                            </label>
-                        </div>
+                            );
+                        })}
                     </div>
 
-                    <div className="mt-8 flex justify-between">
-                        <button
-                            onClick={prevStep}
-                            className="px-8 py-3 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all"
-                        >
+                    {formData.heating && formData.heating === 'biomasse' && (
+                        <div className="alert-box alert-warning" style={{marginTop: '20px'}}>
+                            <strong>⚠️ Hinweis zu Biomasse</strong>
+                            <p style={{marginTop: '8px'}}>
+                                Biomasseheizungen sind nur im Effizienzhaus 55 Standard förderfähig. 
+                                Es muss ein 100% erneuerbarer Energienachweis erbracht werden. 
+                                Für den höheren EH40-Standard wäre eine Wärmepumpe erforderlich.
+                            </p>
+                        </div>
+                    )}
+
+                    {formData.heating && (formData.heating === 'wp' || formData.heating === 'fernwaerme') && (
+                        <div className="alert-box alert-success" style={{marginTop: '20px'}}>
+                            <strong>✅ Sehr gut!</strong>
+                            <p style={{marginTop: '8px'}}>
+                                Mit {formData.heating === 'wp' ? 'einer Wärmepumpe' : 'Fernwärme'} sind sowohl 
+                                Effizienzhaus 40 als auch Effizienzhaus 55 erreichbar. Im nächsten Schritt 
+                                ermitteln wir gemeinsam, welcher Standard für Sie optimal ist.
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="step-navigation">
+                        <button onClick={prevStep} className="btn-navigate btn-previous">
                             ← Zurück
                         </button>
                         <button
                             onClick={nextStep}
                             disabled={!canProceed}
-                            className={`px-8 py-3 rounded-lg font-semibold transition-all ${
-                                canProceed
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            }`}
+                            className="btn-navigate btn-next"
                         >
-                            Berechnen →
+                            Weiter →
                         </button>
                     </div>
                 </div>
             );
         }
 
-        // ==================== STEP 4: ERGEBNIS ====================
-        function Step4Ergebnis({ formData, validationResult, financialResult, updateFormData, prevStep, resetCalculator }) {
-            if (!validationResult) {
-                return <div>Berechnung läuft...</div>;
-            }
-
-            const maxKreditGesamt = validationResult.maxKredit * formData.wohneinheiten;
-            const actualKredit = financialResult ? financialResult.gesamtKredit : 0;
+        // ==================== STEP 4: PV UND SPEICHER ====================
+        function Step4PV({ formData, updateFormData, nextStep, prevStep }) {
+            const canProceed = formData.pvPlanned !== null;
 
             return (
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                        Ihr Förder-Ergebnis
-                    </h2>
+                    <h2 className="section-question">Photovoltaik und Stromspeicher</h2>
 
-                    {!validationResult.eligible ? (
-                        // Nicht förderfähig
-                        <div className="space-y-6">
-                            <div className="p-6 bg-red-100 border-l-4 border-red-500 rounded-lg">
-                                <div className="flex">
-                                    <div className="flex-shrink-0">
-                                        <span className="text-4xl">❌</span>
-                                    </div>
-                                    <div className="ml-4">
-                                        <h3 className="text-xl font-bold text-red-800 mb-2">
-                                            Leider nicht förderfähig
-                                        </h3>
-                                        <p className="text-red-700">
-                                            {validationResult.reason}
-                                        </p>
-                                    </div>
+                    <div className="alert-box alert-info">
+                        <strong>ℹ️ Warum ist das wichtig?</strong>
+                        <p style={{marginTop: '8px', lineHeight: 1.6}}>
+                            Eine PV-Anlage verbessert die Energiebilanz Ihres Gebäudes erheblich und erleichtert 
+                            die Erfüllung höherer Effizienzhaus-Standards. Ein Stromspeicher erhöht zusätzlich 
+                            den Eigenverbrauch und die Unabhängigkeit.
+                        </p>
+                    </div>
+
+                    <h2 className="section-question" style={{marginTop: '25px'}}>Photovoltaik-Anlage</h2>
+
+                    <div className="card-grid">
+                        <div
+                            onClick={() => updateFormData('pvPlanned', true)}
+                            className={`option-card ${formData.pvPlanned === true ? 'selected' : ''}`}
+                        >
+                            <div className="card-icon">☀️</div>
+                            <div className="card-label">Ja, PV-Anlage geplant</div>
+                            <div className="card-description">Stromerzeugung auf dem Dach</div>
+                        </div>
+
+                        <div
+                            onClick={() => {
+                                updateFormData('pvPlanned', false);
+                                updateFormData('batterySpeicher', false);
+                            }}
+                            className={`option-card ${formData.pvPlanned === false ? 'selected' : ''}`}
+                        >
+                            <div className="card-icon">⚪</div>
+                            <div className="card-label">Nein, keine PV-Anlage</div>
+                            <div className="card-description">Strombezug aus dem Netz</div>
+                        </div>
+                    </div>
+
+                    {formData.pvPlanned === true && (
+                        <>
+                            <h2 className="section-question" style={{marginTop: '30px'}}>Stromspeicher / Batterie</h2>
+
+                            <div className="card-grid">
+                                <div
+                                    onClick={() => updateFormData('batterySpeicher', true)}
+                                    className={`option-card ${formData.batterySpeicher === true ? 'selected' : ''}`}
+                                >
+                                    <div className="card-icon">🔋</div>
+                                    <div className="card-label">Ja, mit Batteriespeicher</div>
+                                    <div className="card-description">Erhöht Eigenverbrauch auf 60-80%</div>
+                                </div>
+
+                                <div
+                                    onClick={() => updateFormData('batterySpeicher', false)}
+                                    className={`option-card ${formData.batterySpeicher === false ? 'selected' : ''}`}
+                                >
+                                    <div className="card-icon">⚡</div>
+                                    <div className="card-label">Nein, ohne Speicher</div>
+                                    <div className="card-description">Direkter Verbrauch / Netzeinspeisung</div>
                                 </div>
                             </div>
 
-                            <div className="flex justify-between">
-                                <button
-                                    onClick={prevStep}
-                                    className="px-8 py-3 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all"
-                                >
+                            <div className="alert-box alert-success" style={{marginTop: '15px'}}>
+                                <strong>💡 Tipp:</strong> Ein Batteriespeicher ermöglicht die Nutzung von Solarstrom auch abends 
+                                und nachts. Förderprogramme für Speicher gibt es zusätzlich bei einigen Bundesländern.
+                            </div>
+                        </>
+                    )}
+
+                    <div className="step-navigation">
+                        <button onClick={prevStep} className="btn-navigate btn-previous">
+                            ← Zurück
+                        </button>
+                        <button
+                            onClick={nextStep}
+                            disabled={!canProceed}
+                            className="btn-navigate btn-next"
+                        >
+                            Weiter →
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // ==================== STEP 5: ERGEBNIS ====================
+        function Step5Ergebnis({ formData, validationResult, financialResult, updateFormData, prevStep, resetCalculator, zinssaetze }) {
+            const [eh40Result, setEh40Result] = useState(null);
+            const [eh55Result, setEh55Result] = useState(null);
+            
+            const heatingOptions = [
+                { value: 'wp', label: 'Wärmepumpe', compatible: ['eh40', 'eh55'] },
+                { value: 'fernwaerme', label: 'Fernwärme', compatible: ['eh40', 'eh55'] },
+                { value: 'biomasse', label: 'Biomasse', compatible: ['eh55'] }
+            ];
+            
+            const selectedHeating = heatingOptions.find(h => h.value === formData.heating);
+            const compatibleStandards = selectedHeating ? selectedHeating.compatible : ['eh40', 'eh55'];
+            const hasBothOptions = compatibleStandards.length > 1;
+            
+            // Berechne beide Varianten für Vergleich
+            useEffect(() => {
+                if (!hasBothOptions) {
+                    // Nur eine Option - auto-select
+                    if (formData.heating === 'biomasse' && formData.standard !== 'eh55') {
+                        updateFormData('standard', 'eh55');
+                    }
+                } else if (!formData.standard && zinssaetze) {
+                    // Beide Standards berechnen für Vergleich
+                    const testData40 = {...formData, standard: 'eh40', qngPlanned: false};
+                    const testData55 = {...formData, standard: 'eh55', qngPlanned: false};
+                    
+                    const validation40 = CalculationEngine.validateEligibility(testData40, zinssaetze);
+                    const validation55 = CalculationEngine.validateEligibility(testData55, zinssaetze);
+                    
+                    if (validation40.eligible) {
+                        const maxKredit40 = validation40.maxKredit * formData.wohneinheiten;
+                        const actualKredit40 = Math.min(formData.kreditwunsch, maxKredit40);
+                        const finances40 = CalculationEngine.calculateFinancials(
+                            actualKredit40,
+                            formData.wohneinheiten,
+                            validation40.zinssatz,
+                            zinssaetze
+                        );
+                        setEh40Result({validation: validation40, finances: finances40, maxKredit: maxKredit40});
+                    }
+                    
+                    if (validation55.eligible) {
+                        const maxKredit55 = validation55.maxKredit * formData.wohneinheiten;
+                        const actualKredit55 = Math.min(formData.kreditwunsch, maxKredit55);
+                        const finances55 = CalculationEngine.calculateFinancials(
+                            actualKredit55,
+                            formData.wohneinheiten,
+                            validation55.zinssatz,
+                            zinssaetze
+                        );
+                        setEh55Result({validation: validation55, finances: finances55, maxKredit: maxKredit55});
+                    }
+                }
+            }, [formData.heating, hasBothOptions, formData.standard, zinssaetze]);
+
+            const maxKreditGesamt = validationResult ? validationResult.maxKredit * formData.wohneinheiten : 0;
+
+            return (
+                <div>
+                    {!formData.standard ? (
+                        <>
+                            <h2 className="section-question">Wählen Sie Ihren Effizienzhaus-Standard</h2>
+
+                            {!hasBothOptions ? (
+                                <div className="alert-box alert-info" style={{marginBottom: '20px'}}>
+                                    <strong>ℹ️ Hinweis:</strong> Mit Biomasse-Heizung ist nur der <strong>Effizienzhaus 55 Standard</strong> förderfähig.
+                                </div>
+                            ) : (
+                                <>
+                                    {formData.pvPlanned === true ? (
+                                        <div className="alert-box alert-success" style={{marginBottom: '20px'}}>
+                                            <strong>✅ Mit PV-Anlage:</strong> Vergleichen Sie die konkreten Ersparnisse - 
+                                            EH 40 bietet in der Regel deutlich bessere Konditionen!
+                                        </div>
+                                    ) : (
+                                        <div className="alert-box alert-warning" style={{marginBottom: '20px'}}>
+                                            <strong>⚠️ Ohne PV-Anlage:</strong> EH 40 erfordert sehr gute Dämmwerte. 
+                                            Schauen Sie sich die konkreten Zahlen an, um die beste Entscheidung zu treffen.
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {!hasBothOptions || (!eh40Result && !eh55Result) ? (
+                                <div className="loading-spinner">
+                                    <div className="spinner"></div>
+                                    <p style={{marginTop: '20px', color: '#666'}}>Berechne Ihre Förderoptionen...</p>
+                                </div>
+                            ) : (
+                                <div className="card-grid" style={{gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px'}}>
+                                    {eh40Result && (
+                                        <div
+                                            onClick={() => updateFormData('standard', 'eh40')}
+                                            className="option-card"
+                                            style={{
+                                                padding: '25px 20px',
+                                                border: '3px solid #4caf50',
+                                                background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8f4 100%)',
+                                                cursor: 'pointer',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{position: 'absolute', top: '12px', right: '12px', background: '#4caf50', color: 'white', padding: '4px 10px', borderRadius: '15px', fontSize: '0.75em', fontWeight: 700}}>
+                                                EMPFOHLEN
+                                            </div>
+                                            <div className="card-icon" style={{fontSize: '2.5em', marginBottom: '10px'}}>⭐</div>
+                                            <div style={{fontSize: '1.3em', fontWeight: 700, color: '#1b5e20', marginBottom: '8px'}}>Effizienzhaus 40</div>
+                                            <div style={{fontSize: '0.85em', color: '#2e7d32', marginBottom: '15px'}}>
+                                                Klimafreundlicher Neubau
+                                            </div>
+                                            
+                                            <div style={{background: 'white', padding: '15px', borderRadius: '8px', marginBottom: '12px'}}>
+                                                <div style={{fontSize: '0.8em', color: '#666', marginBottom: '8px'}}>💰 Ihre Ersparnis:</div>
+                                                <div style={{fontSize: '2em', fontWeight: 700, color: '#1b5e20', lineHeight: 1}}>
+                                                    {Math.round(eh40Result.finances.ersparnis.ueber10Jahre).toLocaleString('de-DE')} €
+                                                </div>
+                                                <div style={{fontSize: '0.85em', color: '#666', marginTop: '5px'}}>über 10 Jahre</div>
+                                                <div style={{fontSize: '0.95em', color: '#2e7d32', marginTop: '8px', fontWeight: 600}}>
+                                                    {eh40Result.finances.ersparnis.monatlich.toFixed(2)} € / Monat
+                                                </div>
+                                            </div>
+                                            
+                                            <div style={{fontSize: '0.85em', color: '#2e7d32', lineHeight: 1.4}}>
+                                                <strong>✓</strong> KfW-Zins: {eh40Result.validation.zinssatz}%<br/>
+                                                <strong>✓</strong> Bis zu 150.000 € mit QNG<br/>
+                                                <strong>✓</strong> Dauerhaft verfügbar
+                                            </div>
+                                            
+                                            <button 
+                                                style={{
+                                                    marginTop: '15px',
+                                                    width: '100%',
+                                                    padding: '12px',
+                                                    background: '#4caf50',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    fontSize: '1em',
+                                                    fontWeight: 700,
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                EH 40 wählen →
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {eh55Result && (
+                                        <div
+                                            onClick={() => {
+                                                updateFormData('standard', 'eh55');
+                                                updateFormData('qngPlanned', false);
+                                            }}
+                                            className="option-card"
+                                            style={{
+                                                padding: '25px 20px',
+                                                border: '3px solid #ff9800',
+                                                background: 'linear-gradient(135deg, #fff3e0 0%, #fef5ea 100%)',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <div className="card-icon" style={{fontSize: '2.5em', marginBottom: '10px'}}>⏰</div>
+                                            <div style={{fontSize: '1.3em', fontWeight: 700, color: '#e65100', marginBottom: '8px'}}>Effizienzhaus 55</div>
+                                            <div style={{fontSize: '0.85em', color: '#f57c00', marginBottom: '15px'}}>
+                                                Befristetes Programm
+                                            </div>
+                                            
+                                            <div style={{background: 'white', padding: '15px', borderRadius: '8px', marginBottom: '12px'}}>
+                                                <div style={{fontSize: '0.8em', color: '#666', marginBottom: '8px'}}>💰 Ihre Ersparnis:</div>
+                                                <div style={{fontSize: '2em', fontWeight: 700, color: '#e65100', lineHeight: 1}}>
+                                                    {Math.round(eh55Result.finances.ersparnis.ueber10Jahre).toLocaleString('de-DE')} €
+                                                </div>
+                                                <div style={{fontSize: '0.85em', color: '#666', marginTop: '5px'}}>über 10 Jahre</div>
+                                                <div style={{fontSize: '0.95em', color: '#f57c00', marginTop: '8px', fontWeight: 600}}>
+                                                    {eh55Result.finances.ersparnis.monatlich.toFixed(2)} € / Monat
+                                                </div>
+                                            </div>
+                                            
+                                            <div style={{fontSize: '0.85em', color: '#f57c00', lineHeight: 1.4}}>
+                                                <strong>✓</strong> KfW-Zins: {eh55Result.validation.zinssatz}%<br/>
+                                                <strong>✓</strong> Bis zu 100.000 € pro WE<br/>
+                                                <strong>⚠</strong> Nur mit Genehmigung
+                                            </div>
+                                            
+                                            <button 
+                                                style={{
+                                                    marginTop: '15px',
+                                                    width: '100%',
+                                                    padding: '12px',
+                                                    background: '#ff9800',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    fontSize: '1em',
+                                                    fontWeight: 700,
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                EH 55 wählen →
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="step-navigation" style={{marginTop: '30px'}}>
+                                <button onClick={prevStep} className="btn-navigate btn-previous">
                                     ← Zurück
                                 </button>
-                                <button
-                                    onClick={resetCalculator}
-                                    className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
-                                >
+                                <div></div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {!validationResult ? (
+                                <div className="loading-spinner">
+                                    <div className="spinner"></div>
+                                    <p style={{marginTop: '20px', color: '#666'}}>Berechnung läuft...</p>
+                                </div>
+                            ) : (
+                                <>
+                            <h2 className="section-question">Ihr Förder-Ergebnis</h2>
+
+                            {!validationResult.eligible ? (
+                                <>
+                            <div className="alert-box alert-error">
+                                <strong style={{fontSize: '1.2em'}}>❌ Leider nicht förderfähig</strong>
+                                <p style={{marginTop: '10px', lineHeight: 1.6}}>
+                                    {validationResult.reason}
+                                </p>
+                            </div>
+
+                            <div className="step-navigation">
+                                <button onClick={prevStep} className="btn-navigate btn-previous">
+                                    ← Zurück
+                                </button>
+                                <button onClick={resetCalculator} className="btn-navigate btn-restart">
                                     Neu berechnen
                                 </button>
                             </div>
-                        </div>
+                        </>
                     ) : (
-                        // Förderfähig
-                        <div className="space-y-6">
-                            {/* Erfolgsmeldung */}
-                            <div className="p-6 bg-green-100 border-l-4 border-green-500 rounded-lg">
-                                <div className="flex">
-                                    <div className="flex-shrink-0">
-                                        <span className="text-4xl">✅</span>
-                                    </div>
-                                    <div className="ml-4 flex-1">
-                                        <h3 className="text-xl font-bold text-green-800 mb-2">
-                                            Herzlichen Glückwunsch! Ihr Projekt ist förderfähig
-                                        </h3>
-                                        <p className="text-green-700 font-semibold">
-                                            Programm: {validationResult.program}
-                                        </p>
-                                        <p className="text-green-700">
-                                            KfW {formData.usage === 'selbstgenutzt' ? '297' : '298'} - KfW-Zinssatz: {validationResult.zinssatz}%
-                                        </p>
-                                        {validationResult.bonus && (
-                                            <p className="text-green-800 font-bold mt-2">
-                                                🎉 {validationResult.bonus}
-                                            </p>
-                                        )}
-                                        {validationResult.warning && (
-                                            <p className="text-orange-700 mt-2">
-                                                ℹ️ {validationResult.warning}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
+                        <>
+                            <div className="alert-box alert-success">
+                                <strong style={{fontSize: '1.2em'}}>✅ Herzlichen Glückwunsch! Ihr Projekt ist förderfähig</strong>
+                                <p style={{marginTop: '10px', lineHeight: 1.6}}>
+                                    <strong>Programm:</strong> {validationResult.program}<br/>
+                                    <strong>KfW {formData.usage === 'selbstgenutzt' ? '297' : '298'}</strong> - KfW-Zinssatz: <strong>{validationResult.zinssatz}%</strong>
+                                </p>
+                                {validationResult.bonus && (
+                                    <p style={{marginTop: '8px', fontWeight: 600, color: '#1b5e20'}}>
+                                        🎉 {validationResult.bonus}
+                                    </p>
+                                )}
+                                {validationResult.warning && (
+                                    <p style={{marginTop: '8px', color: '#e65100'}}>
+                                        ℹ️ {validationResult.warning}
+                                    </p>
+                                )}
                             </div>
 
-                            {/* Kreditbetrag eingeben */}
-                            <div className="p-6 bg-gray-50 rounded-lg">
-                                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                                    Gewünschter Kreditbetrag
-                                </label>
-                                <div className="flex items-center space-x-4">
-                                    <input
-                                        type="number"
-                                        min="10000"
-                                        max={maxKreditGesamt}
-                                        step="5000"
-                                        value={formData.kreditwunsch}
-                                        onChange={(e) => updateFormData('kreditwunsch', parseInt(e.target.value) || 0)}
-                                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-semibold"
-                                    />
-                                    <span className="text-lg font-semibold text-gray-700">€</span>
-                                </div>
-                                <p className="mt-2 text-sm text-gray-600">
-                                    Maximaler Kreditbetrag für Ihr Projekt: {maxKreditGesamt.toLocaleString('de-DE')} €
-                                    ({formData.wohneinheiten} WE × {validationResult.maxKredit.toLocaleString('de-DE')} €)
+                            <div className="form-group">
+                                <label>Maximaler Kreditbetrag für Ihr Projekt: <strong>{maxKreditGesamt.toLocaleString('de-DE')} €</strong> ({formData.wohneinheiten} WE × {validationResult.maxKredit.toLocaleString('de-DE')} €)</label>
+                                <input
+                                    type="text"
+                                    value={formData.kreditwunsch.toLocaleString('de-DE') + ' €'}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/\./g, '').replace(/\s/g, '').replace(/€/g, '');
+                                        const numValue = parseInt(value) || 0;
+                                        updateFormData('kreditwunsch', numValue);
+                                    }}
+                                    style={{fontSize: '1.2em', fontWeight: 600}}
+                                />
+                                <p style={{marginTop: '8px', fontSize: '0.9em', color: '#666'}}>
+                                    Geben Sie den gewünschten Kreditbetrag ein (zwischen 10.000 € und {maxKreditGesamt.toLocaleString('de-DE')} €)
                                 </p>
                                 {formData.kreditwunsch > maxKreditGesamt && (
-                                    <p className="mt-2 text-sm text-orange-600 font-semibold">
+                                    <p style={{marginTop: '5px', fontSize: '0.9em', color: '#e65100', fontWeight: 600}}>
                                         ⚠️ Der gewünschte Betrag überschreitet die Fördergrenze. Es werden maximal {maxKreditGesamt.toLocaleString('de-DE')} € berechnet.
                                     </p>
                                 )}
                             </div>
 
-                            {/* Finanzvergleich */}
                             {financialResult && (
-                                <div className="space-y-6">
-                                    <h3 className="text-xl font-bold text-gray-900">
-                                        💰 Ihr KfW-Vorteil im Detail
-                                    </h3>
-
-                                    {/* Vergleichstabelle */}
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full border-collapse">
-                                            <thead>
-                                                <tr className="bg-gray-100">
-                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                                                        Vergleichspunkt
-                                                    </th>
-                                                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
-                                                        Hausbank (Interhyp)
-                                                    </th>
-                                                    <th className="px-4 py-3 text-center text-sm font-semibold text-green-700">
-                                                        KfW {formData.usage === 'selbstgenutzt' ? '297' : '298'}
-                                                    </th>
-                                                    <th className="px-4 py-3 text-center text-sm font-semibold text-blue-700">
-                                                        Ihre Ersparnis
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="bg-white divide-y divide-gray-200">
-                                                <tr>
-                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                        Kreditbetrag
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm text-gray-700">
-                                                        {financialResult.gesamtKredit.toLocaleString('de-DE')} €
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm text-gray-700">
-                                                        {financialResult.gesamtKredit.toLocaleString('de-DE')} €
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm text-gray-400">
-                                                        -
-                                                    </td>
-                                                </tr>
-                                                <tr className="bg-gray-50">
-                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                        Zinssatz (10 Jahre)
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm text-gray-700">
-                                                        {financialResult.markt.zinssatz.toFixed(2)}%
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm font-semibold text-green-700">
-                                                        {financialResult.kfw.zinssatz.toFixed(2)}%
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm font-semibold text-blue-700">
-                                                        -{(financialResult.markt.zinssatz - financialResult.kfw.zinssatz).toFixed(2)}%
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                        Monatliche Rate
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm text-gray-700">
-                                                        {financialResult.markt.monatlicheRate.toFixed(2)} €
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm font-semibold text-green-700">
-                                                        {financialResult.kfw.monatlicheRate.toFixed(2)} €
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm font-semibold text-blue-700">
-                                                        -{financialResult.ersparnis.monatlich.toFixed(2)} €
-                                                    </td>
-                                                </tr>
-                                                <tr className="bg-gray-50">
-                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                        Zinsen im 1. Jahr
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm text-gray-700">
-                                                        {financialResult.markt.zinsJahr1.toFixed(0)} €
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm font-semibold text-green-700">
-                                                        {financialResult.kfw.zinsJahr1.toFixed(0)} €
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-sm text-gray-400">
-                                                        -
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* Gesamtersparnis Highlight */}
-                                    <div className="p-6 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white">
-                                        <div className="text-center">
-                                            <div className="text-sm font-semibold mb-2">
-                                                Ihre Gesamtersparnis über 10 Jahre Zinsbindung
-                                            </div>
-                                            <div className="text-5xl font-bold mb-2">
-                                                {financialResult.ersparnis.ueber10Jahre.toFixed(0).toLocaleString('de-DE')} €
-                                            </div>
-                                            <div className="text-sm opacity-90">
-                                                Das entspricht {financialResult.ersparnis.monatlich.toFixed(2)} € mehr Liquidität pro Monat
-                                            </div>
+                                <div className="result-section">
+                                    <div className="result-highlight">
+                                        <h2>💰 Ihr KfW-Vorteil</h2>
+                                        <div className="big-number">
+                                            {Math.round(financialResult.ersparnis.ueber10Jahre).toLocaleString('de-DE')} €
                                         </div>
+                                        <p>
+                                            Gesamtersparnis über 10 Jahre Zinsbindung<br/>
+                                            Das entspricht <strong>{financialResult.ersparnis.monatlich.toFixed(2)} € mehr Liquidität pro Monat</strong>
+                                        </p>
                                     </div>
 
-                                    {/* Visualisierung */}
-                                    <div className="p-6 bg-gray-50 rounded-lg">
-                                        <h4 className="text-sm font-semibold text-gray-700 mb-4">
-                                            Zinskosten-Vergleich über 10 Jahre
-                                        </h4>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <div className="flex justify-between mb-1">
-                                                    <span className="text-sm text-gray-600">Hausbank</span>
-                                                    <span className="text-sm font-semibold text-gray-900">
-                                                        {(financialResult.markt.zinsJahr1 * 10).toFixed(0).toLocaleString('de-DE')} €
-                                                    </span>
+                                    <div className="result-card">
+                                        <h3>Detaillierter Finanzvergleich</h3>
+                                        
+                                        <div className="result-item">
+                                            <span className="result-label">Kreditbetrag</span>
+                                            <span className="result-value">{financialResult.gesamtKredit.toLocaleString('de-DE')} €</span>
+                                        </div>
+
+                                        <div className="comparison-bar">
+                                            <div className="comparison-item">
+                                                <div className="comparison-label">
+                                                    <span>Hausbank (Interhyp) - {financialResult.markt.zinssatz.toFixed(2)}%</span>
+                                                    <span>{financialResult.markt.monatlicheRate.toFixed(2)} €/Monat</span>
                                                 </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-6">
+                                                <div className="bar-background">
                                                     <div 
-                                                        className="bg-red-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                                        style={{ width: '100%' }}
+                                                        className="bar-fill market"
+                                                        style={{width: '100%'}}
                                                     >
-                                                        <span className="text-xs font-semibold text-white">
-                                                            {financialResult.markt.zinssatz.toFixed(2)}%
-                                                        </span>
+                                                        {financialResult.markt.zinssatz.toFixed(2)}%
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div>
-                                                <div className="flex justify-between mb-1">
-                                                    <span className="text-sm text-gray-600">KfW</span>
-                                                    <span className="text-sm font-semibold text-green-700">
-                                                        {(financialResult.kfw.zinsJahr1 * 10).toFixed(0).toLocaleString('de-DE')} €
-                                                    </span>
+
+                                            <div className="comparison-item">
+                                                <div className="comparison-label">
+                                                    <span>KfW {formData.usage === 'selbstgenutzt' ? '297' : '298'} - {financialResult.kfw.zinssatz.toFixed(2)}%</span>
+                                                    <span>{financialResult.kfw.monatlicheRate.toFixed(2)} €/Monat</span>
                                                 </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-6">
+                                                <div className="bar-background">
                                                     <div 
-                                                        className="bg-green-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                                        style={{ 
-                                                            width: `${(financialResult.kfw.zinssatz / financialResult.markt.zinssatz) * 100}%` 
+                                                        className="bar-fill kfw"
+                                                        style={{
+                                                            width: `${(financialResult.kfw.zinssatz / financialResult.markt.zinssatz) * 100}%`
                                                         }}
                                                     >
-                                                        <span className="text-xs font-semibold text-white">
-                                                            {financialResult.kfw.zinssatz.toFixed(2)}%
-                                                        </span>
+                                                        {financialResult.kfw.zinssatz.toFixed(2)}%
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-4">
-                                            * Vereinfachte Darstellung ohne Berücksichtigung des Tilgungseffekts. 
-                                            Die tatsächliche Ersparnis kann durch Sondertilgungen variieren.
-                                        </p>
+
+                                        <div className="result-item" style={{borderTop: '2px solid #e0e0e0', paddingTop: '15px', marginTop: '10px'}}>
+                                            <span className="result-label">Monatliche Ersparnis</span>
+                                            <span className="result-value" style={{color: '#4caf50'}}>-{financialResult.ersparnis.monatlich.toFixed(2)} €</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="alert-box alert-info">
+                                        <strong>📋 Nächste Schritte</strong>
+                                        <ol style={{marginTop: '10px', marginLeft: '20px', lineHeight: 1.8}}>
+                                            <li>Kontaktieren Sie einen zertifizierten Energie-Effizienz-Experten</li>
+                                            <li>Lassen Sie die technische Machbarkeit bestätigen</li>
+                                            <li>Stellen Sie den KfW-Antrag VOR Baubeginn über Ihre Hausbank</li>
+                                            <li>Nach Zusage: Bauvorhaben starten und Förderung nutzen</li>
+                                        </ol>
+                                        <div style={{marginTop: '15px'}}>
+                                            <a 
+                                                href="https://www.energie-effizienz-experten.de/" 
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{
+                                                    display: 'inline-block',
+                                                    padding: '12px 24px',
+                                                    background: '#50685b',
+                                                    color: 'white',
+                                                    textDecoration: 'none',
+                                                    borderRadius: '8px',
+                                                    fontWeight: 600,
+                                                    transition: 'all 0.3s ease'
+                                                }}
+                                            >
+                                                Experten finden →
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Call to Action */}
-                            <div className="p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                                <h4 className="font-bold text-blue-900 mb-2">
-                                    📋 Nächste Schritte
-                                </h4>
-                                <ol className="list-decimal list-inside space-y-2 text-sm text-blue-800">
-                                    <li>Kontaktieren Sie einen zertifizierten Energie-Effizienz-Experten</li>
-                                    <li>Lassen Sie die technische Machbarkeit bestätigen</li>
-                                    <li>Stellen Sie den KfW-Antrag VOR Baubeginn über Ihre Hausbank</li>
-                                    <li>Nach Zusage: Bauvorhaben starten und Förderung nutzen</li>
-                                </ol>
-                                <div className="mt-4">
-                                    <a 
-                                        href="https://www.energie-effizienz-experten.de/" 
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
-                                    >
-                                        Experten finden →
-                                    </a>
-                                </div>
-                            </div>
-
-                            {/* Buttons */}
-                            <div className="flex justify-between">
-                                <button
-                                    onClick={prevStep}
-                                    className="px-8 py-3 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all"
-                                >
+                            <div className="step-navigation">
+                                <button onClick={prevStep} className="btn-navigate btn-previous">
                                     ← Zurück
                                 </button>
-                                <button
-                                    onClick={resetCalculator}
-                                    className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
-                                >
+                                <button onClick={resetCalculator} className="btn-navigate btn-restart">
                                     Neu berechnen
                                 </button>
                             </div>
-                        </div>
+                        </>
+                    )}
+                    </>
+                    )}
+                    </>
                     )}
                 </div>
-            );
-        }
-
-        // ==================== HILFSFUNKTIONEN ====================
-        function InfoTooltip({ text }) {
-            return (
-                <span className="tooltip ml-1">
-                    <span className="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-blue-500 rounded-full cursor-help">
-                        ?
-                    </span>
-                    <span className="tooltiptext">{text}</span>
-                </span>
             );
         }
 
